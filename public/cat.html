@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 好友</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a class="active" href="./cat.html">好友</a>
+        <a href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell">
+      <section class="page-heading">
+        <p class="eyebrow">猫咪好友</p>
+        <h1>给熟悉的猫猫投喂一点心意</h1>
+      </section>
+      <section id="inventory-panel" class="inventory-panel" aria-label="玩家道具库存"></section>
+      <div id="cat-status"></div>
+      <section id="cat-list" class="cat-grid"></section>
+    </main>
+    <script type="module" src="./scripts/cat.js"></script>
+  </body>
+</html>

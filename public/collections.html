@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 图鉴</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a href="./cat.html">好友</a>
+        <a class="active" href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell">
+      <section class="page-heading">
+        <p class="eyebrow">收藏柜</p>
+        <h1>感谢卡、猫咪档案和小游戏回忆</h1>
+      </section>
+      <div id="collection-status"></div>
+      <section class="collection-section">
+        <h2>猫咪朋友</h2>
+        <div id="friend-collection" class="collection-grid"></div>
+      </section>
+      <section class="collection-section">
+        <h2>感谢卡片</h2>
+        <div id="card-collection" class="collection-grid"></div>
+      </section>
+      <section class="collection-section">
+        <h2>小游戏</h2>
+        <div id="game-collection" class="collection-grid"></div>
+      </section>
+    </main>
+    <script type="module" src="./scripts/collections.js"></script>
+  </body>
+</html>

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 登录</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <div class="brand-lockup">
+          <span class="brand-mark">猫</span>
+          <div>
+            <p class="eyebrow">Catsbook RPG</p>
+            <h1 id="auth-title">猫书</h1>
+          </div>
+        </div>
+        <p class="auth-copy">注册一位铲屎官，进入猫咪们悄悄运营的暖呼呼社交站。</p>
+        <form id="auth-form" class="form-stack">
+          <label>
+            昵称
+            <input id="display-name" name="display_name" type="text" maxlength="24" autocomplete="nickname" placeholder="注册时填写，例如：小鱼干管理员" />
+          </label>
+          <label>
+            邮箱
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="meow@example.com" required />
+          </label>
+          <label>
+            密码
+            <input id="password" name="password" type="password" minlength="6" autocomplete="current-password" placeholder="至少 6 位" required />
+          </label>
+          <div class="button-row">
+            <button class="primary-btn" type="submit" data-auth-mode="login">登录</button>
+            <button class="ghost-btn" type="button" id="register-button">注册</button>
+          </div>
+        </form>
+        <div id="auth-message" class="message" role="status"></div>
+      </section>
+    </main>
+    <script type="module" src="./scripts/auth.js"></script>
+  </body>
+</html>

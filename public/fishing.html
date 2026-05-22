@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 钓鱼</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a href="./cat.html">好友</a>
+        <a href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell game-shell">
+      <section class="page-heading">
+        <p class="eyebrow">小河边</p>
+        <h1>任务钓场</h1>
+      </section>
+      <div class="game-card">
+        <canvas id="fishing-canvas" width="760" height="480" aria-label="钓鱼小游戏画布"></canvas>
+        <div class="button-row">
+          <button id="restart-game" class="ghost-btn" type="button">重新开始</button>
+          <a class="primary-link" href="./feed.html">回到帖子</a>
+        </div>
+        <div id="game-message" class="message" role="status"></div>
+      </div>
+    </main>
+    <script type="module" src="./scripts/fishing.js"></script>
+  </body>
+</html>

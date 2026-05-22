@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 像素猫头合成</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body class="pixel-page">
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a href="./cat.html">好友</a>
+        <a href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell game-shell">
+      <section class="page-heading pixel-heading">
+        <p class="eyebrow">纸箱实验室</p>
+        <h1>任务合成机</h1>
+      </section>
+      <div class="game-card pixel-game-card">
+        <div class="game-hud">
+          <span id="merge-score">分数 0</span>
+          <span id="merge-target">目标 260</span>
+          <span id="merge-next">下一个：猫头</span>
+        </div>
+        <canvas id="merge-canvas" width="760" height="680" aria-label="像素猫头合成小游戏画布"></canvas>
+        <div class="button-row">
+          <button id="restart-merge" class="ghost-btn" type="button">重新开始</button>
+          <a class="primary-link" href="./feed.html">回到帖子</a>
+        </div>
+        <div id="merge-message" class="message" role="status"></div>
+      </div>
+    </main>
+    <script type="module" src="./scripts/merge.js"></script>
+  </body>
+</html>

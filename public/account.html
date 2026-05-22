@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 账户</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a href="./cat.html">好友</a>
+        <a href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn active" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell account-shell">
+      <section class="page-heading">
+        <p class="eyebrow">玩家账户</p>
+        <h1>整理你的猫书身份</h1>
+      </section>
+      <section class="account-card" aria-labelledby="account-title">
+        <h2 id="account-title">账户资料</h2>
+        <form id="profile-form" class="form-stack">
+          <label>
+            昵称
+            <input id="profile-name" name="display_name" type="text" maxlength="24" autocomplete="nickname" required />
+          </label>
+          <label>
+            玩家 ID
+            <input id="profile-id" type="text" readonly />
+          </label>
+          <div class="button-row">
+            <button class="primary-btn" type="submit">保存昵称</button>
+            <button id="logout-button" class="ghost-btn" type="button">退出账户</button>
+          </div>
+        </form>
+        <div id="account-message" class="message" role="status"></div>
+      </section>
+    </main>
+    <script type="module" src="./scripts/account.js"></script>
+  </body>
+</html>
