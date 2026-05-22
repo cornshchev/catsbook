@@ -165,3 +165,6 @@ public/resources/avatars/mimi.png
 - 给 `merge_cats` 增加更多像素猫头等级、障碍物或限时目标。
 - 增加背包表，限制每日投喂次数和道具消耗。
 - 增加评论列表读取和猫咪自动回复。
+
+## test
+天降一只咩！
