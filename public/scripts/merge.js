@@ -12,11 +12,14 @@ const restartButton = $("#restart-merge");
 
 const pendingQuest = api.getPendingMergeQuest();
 const params = new URLSearchParams(window.location.search);
+const urlTarget = params.get("target");
+const targetScore = urlTarget ? Number(urlTarget) : pendingQuest?.targetScore;
 const config = {
   questId: pendingQuest?.questId || null,
-  title: pendingQuest?.title || "自由合成练习",
+  title: pendingQuest?.title || "无限合成练习",
   difficulty: Number(params.get("difficulty") || pendingQuest?.difficulty || 1),
-  targetScore: Number(params.get("target") || pendingQuest?.targetScore || 320),
+  targetScore: targetScore ? Number(targetScore) : null,
+  endless: !targetScore,
 };
 
 const board = {
@@ -125,10 +128,8 @@ function resetGame() {
   state.gameOver = false;
   state.lastTime = performance.now();
   updateHud();
-  setStatus(
-    message,
-    `${config.title}：点击纸箱上方投放圆形像素猫，相同猫咪碰到会合成。目标分数 ${config.targetScore}，难度 ${config.difficulty}。`
-  );
+  const modeText = config.endless ? "无限模式，没有目标分数。" : `目标分数 ${config.targetScore}。`;
+  setStatus(message, `${config.title}：点击纸箱上方投放圆形像素猫，相同猫咪碰到会合成。${modeText}难度 ${config.difficulty}。`);
 }
 
 function loop(time) {
@@ -224,7 +225,7 @@ function mergeCats(a, b) {
   state.score += catLevels[nextLevel].score;
   updateHud();
 
-  if (state.score >= config.targetScore) completeMergeQuest();
+  if (!config.endless && state.score >= config.targetScore) completeMergeQuest();
 }
 
 function dropCat() {
@@ -245,7 +246,7 @@ function createCat(level, x, y) {
   const data = catLevels[level];
 
   return {
-    id: crypto.randomUUID(),
+    id: createId(),
     level,
     x,
     y,
@@ -303,7 +304,7 @@ function checkGameOver() {
 
 function updateHud() {
   scoreLabel.textContent = `分数 ${state.score}`;
-  targetLabel.textContent = `目标 ${config.targetScore}`;
+  targetLabel.textContent = config.endless ? "无限模式" : `目标 ${config.targetScore}`;
   nextLabel.textContent = `下一个：${catLevels[state.nextLevel].name}`;
 }
 
@@ -746,4 +747,26 @@ function getCanvasPoint(event) {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function createId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+
+  if (window.crypto && typeof window.crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = [...bytes]
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  return `cat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
