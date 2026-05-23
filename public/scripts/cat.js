@@ -43,7 +43,13 @@ function renderCat(friend) {
     el("div", { class: "post-author" }, [
       renderAvatar(cat),
       el("div", {}, [
-        el("h2", { text: cat?.name || "猫咪" }),
+        el("h2", {}, [
+          el("a", {
+            class: "profile-link",
+            href: `./friend.html?cat_id=${encodeURIComponent(cat.id)}&name=${encodeURIComponent(cat?.name || "猫咪")}`,
+            text: cat?.name || "猫咪",
+          }),
+        ]),
         el("div", { class: "handle", text: cat?.handle || "@catsbook" }),
       ]),
     ]),

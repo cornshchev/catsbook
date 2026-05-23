@@ -59,7 +59,13 @@ function renderPost(post) {
     el("div", { class: "post-author" }, [
       renderAvatar(post.cat),
       el("div", {}, [
-        el("h3", { text: post.cat?.name || "猫咪" }),
+        el("h3", {}, [
+          el("a", {
+            class: "profile-link",
+            href: `./friend.html?cat_id=${encodeURIComponent(post.cat_id)}&name=${encodeURIComponent(post.cat?.name || "猫咪")}`,
+            text: post.cat?.name || "猫咪",
+          }),
+        ]),
         el("div", { class: "handle", text: post.cat?.handle || "@catsbook" }),
       ]),
     ]),

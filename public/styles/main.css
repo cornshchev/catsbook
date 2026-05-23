@@ -361,6 +361,16 @@ input {
   padding: 18px;
 }
 
+.profile-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.profile-link:hover,
+.profile-link:focus {
+  text-decoration: underline;
+}
+
 .post-author {
   gap: 12px;
   margin-bottom: 14px;
