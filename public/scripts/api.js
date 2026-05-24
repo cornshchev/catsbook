@@ -63,7 +63,7 @@ const demoSeed = {
       image_path: "posts/welcome-note.png",
       sort_order: 2,
       created_at: "2026-05-22T09:18:00+08:00",
-      unlock_key: "liked_first_post",
+      unlock_key: "liked_post:first-morning",
       quest_id: "quest-welcome-dialogue",
     },
     {
@@ -126,7 +126,7 @@ const demoSeed = {
       game_key: "dialogue",
       difficulty: 1,
       target_score: 0,
-      unlock_key: "liked_first_post",
+      unlock_key: "liked_post:first-morning",
       reward_affection: 12,
       reward_card_title: "米米的窗台谢卡",
       reward_card_text: "谢谢你把第一张小纸条读完。以后阳光也分你一半。",
@@ -272,7 +272,11 @@ function hasCompleted(state, questSlug) {
 
 function isUnlocked(state, unlockKey) {
   if (!unlockKey) return true;
-  if (unlockKey === "liked_first_post") return state.likes.includes("post-first-morning");
+  if (unlockKey.startsWith("liked_post:")) {
+    const postSlug = unlockKey.replace("liked_post:", "");
+    const post = state.posts.find((item) => item.slug === postSlug);
+    return post ? state.likes.includes(post.id) : false;
+  }
   if (unlockKey === "completed_welcome_dialogue") return hasCompleted(state, "welcome-dialogue") || hasCompleted(state, "mimi-welcome");
   if (unlockKey.startsWith("quest_completed:")) return hasCompleted(state, unlockKey.replace("quest_completed:", ""));
   return false;

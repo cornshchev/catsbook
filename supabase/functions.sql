@@ -22,11 +22,12 @@ set search_path = public
 as $$
   select case
     when p_unlock_key is null then true
-    when p_unlock_key = 'liked_first_post' then exists (
+    when p_unlock_key like 'liked_post:%' then exists (
       select 1
       from public.post_likes pl
       join public.posts p on p.id = pl.post_id
-      where pl.player_id = p_player_id and p.slug = 'first-morning'
+      where pl.player_id = p_player_id
+        and p.slug = replace(p_unlock_key, 'liked_post:', '')
     )
     when p_unlock_key = 'completed_welcome_dialogue' then exists (
       select 1

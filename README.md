@@ -155,7 +155,8 @@ public/resources/avatars/mimi.png
 2. 在 `public.posts` 新增帖子，并把 `quest_id` 指向对应任务。
 3. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
 4. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
-5. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
+5. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
+6. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
 
 ## 如何维护剧情
 

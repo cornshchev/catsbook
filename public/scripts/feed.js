@@ -348,6 +348,11 @@ async function handleQuest(quest) {
           }
         },
       },
+      {
+        label: "查看感谢卡",
+        className: "ghost-btn",
+        onClick: () => showRewardCardPreview(quest),
+      },
       { label: "稍后", className: "ghost-btn" },
     ]);
     return;
@@ -362,6 +367,53 @@ function showCompletedQuest(quest) {
     "状态：已完成",
     quest.reward_card_title ? `已获得：${quest.reward_card_title}` : "感谢卡已收入图鉴。",
   ], [
+    {
+      label: "查看感谢卡",
+      className: "ghost-btn",
+      onClick: () => showRewardCardPreview(quest),
+    },
     { label: "知道了", className: "primary-btn" },
   ]);
+}
+
+function showRewardCardPreview(quest) {
+  const title = quest.reward_card_title || "猫咪感谢卡";
+  const imageUrl = api.getResourceUrl(quest.reward_image_path);
+  const imageLabel = quest.reward_image_label || "感谢卡图片";
+  const dialog = el("dialog", { class: "reward-card-dialog" });
+  const close = () => {
+    dialog.close();
+    dialog.remove();
+  };
+
+  const image = imageUrl
+    ? el("figure", { class: "reward-card-image has-image" }, [
+        el("img", { src: imageUrl, alt: imageLabel, loading: "lazy" }),
+        el("figcaption", { text: imageLabel }),
+      ])
+    : el("div", { class: "reward-card-image", text: imageLabel });
+
+  dialog.append(
+    el("div", { class: "dialog-body reward-card-body" }, [
+      el("button", {
+        class: "avatar-preview-close",
+        type: "button",
+        "aria-label": "关闭感谢卡预览",
+        title: "关闭",
+        text: "×",
+        onclick: close,
+      }),
+      el("p", { class: "eyebrow", text: "猫咪感谢卡" }),
+      image,
+      el("h2", { text: title }),
+      el("p", { class: "muted", text: quest.reward_card_text || "完成任务后，这张卡片会收入图鉴。" }),
+    ]),
+  );
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) close();
+  });
+
+  document.body.append(dialog);
+  dialog.showModal();
 }

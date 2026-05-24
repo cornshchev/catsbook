@@ -779,6 +779,7 @@ dialog::backdrop {
 }
 
 .reward-card-body {
+  position: relative;
   display: grid;
   gap: 12px;
 }
