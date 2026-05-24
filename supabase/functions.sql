@@ -58,6 +58,7 @@ returns table (
   image_label text,
   image_path text,
   sort_order integer,
+  created_at timestamptz,
   quest_id uuid,
   cat jsonb,
   quest jsonb,
@@ -79,6 +80,7 @@ begin
     p.image_label,
     p.image_path,
     p.sort_order,
+    p.created_at,
     p.quest_id,
     jsonb_build_object(
       'id', c.id,
@@ -98,7 +100,12 @@ begin
       'type', q.type,
       'game_key', q.game_key,
       'difficulty', q.difficulty,
-      'target_score', q.target_score
+      'target_score', q.target_score,
+      'reward_card_title', q.reward_card_title,
+      'reward_card_text', q.reward_card_text,
+      'reward_image_label', q.reward_image_label,
+      'reward_image_path', q.reward_image_path,
+      'status', coalesce(pq.status, 'available')
     ) end as quest,
     exists (
       select 1 from public.post_likes pl
@@ -107,6 +114,7 @@ begin
   from public.posts p
   join public.cats c on c.id = p.cat_id
   left join public.quests q on q.id = p.quest_id
+  left join public.player_quests pq on pq.quest_id = q.id and pq.player_id = p_player_id
   where public.is_unlocked(p_player_id, p.unlock_key)
   order by p.sort_order, p.created_at;
 end;

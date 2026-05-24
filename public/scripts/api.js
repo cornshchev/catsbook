@@ -50,6 +50,7 @@ const demoSeed = {
       image_label: "窗台阳光照片",
       image_path: "posts/window-sun.png",
       sort_order: 1,
+      created_at: "2026-05-22T09:10:00+08:00",
       unlock_key: null,
       quest_id: null,
     },
@@ -61,6 +62,7 @@ const demoSeed = {
       image_label: "写着欢迎词的小纸条",
       image_path: "posts/welcome-note.png",
       sort_order: 2,
+      created_at: "2026-05-22T09:18:00+08:00",
       unlock_key: "liked_first_post",
       quest_id: "quest-welcome-dialogue",
     },
@@ -72,6 +74,7 @@ const demoSeed = {
       image_label: "小河和浮漂",
       image_path: "posts/river-fishing.png",
       sort_order: 3,
+      created_at: "2026-05-22T20:30:00+08:00",
       unlock_key: "completed_welcome_dialogue",
       quest_id: "quest-shiny-fish",
     },
@@ -83,6 +86,7 @@ const demoSeed = {
       image_label: "像素猫头合成机",
       image_path: "posts/merge-cats.png",
       sort_order: 4,
+      created_at: "2026-05-23T14:00:00+08:00",
       unlock_key: "completed_welcome_dialogue",
       quest_id: "quest-merge-cats",
     },
@@ -94,6 +98,7 @@ const demoSeed = {
       image_label: "雨后水沟钓点",
       image_path: "posts/mimi-rain-fish.png",
       sort_order: 5,
+      created_at: "2026-05-23T18:20:00+08:00",
       unlock_key: "quest_completed:shiny-fish",
       quest_id: "quest-mimi-rain-fish",
     },
@@ -105,6 +110,7 @@ const demoSeed = {
       image_label: "河边临时合成台",
       image_path: "posts/achi-cat-stack.png",
       sort_order: 6,
+      created_at: "2026-05-24T11:40:00+08:00",
       unlock_key: "quest_completed:merge-cats",
       quest_id: "quest-achi-cat-stack",
     },
@@ -247,7 +253,7 @@ function withResourceImage(item, sourceKey = "image_path", targetKey = "image_ur
 }
 
 function shouldUseDemo() {
-  return !hasSupabaseConfig && ENABLE_LOCAL_DEMO;
+  return ENABLE_LOCAL_DEMO && (!hasSupabaseConfig || !supabase);
 }
 
 function getCat(state, catId) {
@@ -442,7 +448,7 @@ export async function listFeedPosts(playerId) {
       .map((post) => ({
         ...withResourceImage(post),
         cat: getCat(state, post.cat_id),
-        quest: state.quests.find((quest) => quest.id === post.quest_id) || null,
+        quest: getPostQuest(state, post.quest_id),
         liked: state.likes.includes(post.id),
       }));
   }
@@ -453,7 +459,25 @@ export async function listFeedPosts(playerId) {
   return (data || []).map((post) => ({
     ...withResourceImage(post),
     cat: withCatResource(post.cat),
+    quest: normalizeFeedQuest(post.quest),
   }));
+}
+
+function normalizeFeedQuest(quest) {
+  if (!quest) return null;
+  return {
+    ...quest,
+    status: quest.status || "available",
+  };
+}
+
+function getPostQuest(state, questId) {
+  const quest = state.quests.find((item) => item.id === questId);
+  if (!quest) return null;
+  return {
+    ...quest,
+    status: state.questStates[quest.id] || "available",
+  };
 }
 
 export async function likePost(playerId, postId) {

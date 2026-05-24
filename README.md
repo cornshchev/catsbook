@@ -91,6 +91,13 @@ python3 -m http.server 5173 -d public
 http://localhost:5173
 ```
 
+如果需要从supabase云端拉取最新文件，运行：
+
+```bash
+supabase db dump --linked --data-only --schema "public" --file=supabase/seed.sql
+```
+
+
 ## 玩法流程
 
 1. 首次进入 `index.html` 注册或登录。

@@ -3,7 +3,6 @@ import { $, clear, el, setStatus, setupLogout } from "./ui.js";
 
 const playerId = api.requirePlayer();
 const status = $("#collection-status");
-const friendCollection = $("#friend-collection");
 const cardCollection = $("#card-collection");
 const gameCollection = $("#game-collection");
 
@@ -15,33 +14,11 @@ async function loadCollections() {
   try {
     const collections = await api.getCollections(playerId);
     setStatus(status, "");
-    renderFriends(collections.friends || []);
     renderCards(collections.cards || []);
     renderGames(collections.games || []);
   } catch (error) {
     setStatus(status, error.message, "error");
   }
-}
-
-function renderFriends(items) {
-  clear(friendCollection);
-  items.forEach((item) => {
-    friendCollection.append(
-      el("article", { class: item.unlocked ? "collection-card" : "collection-card locked" }, [
-        renderFriendImage(item),
-        el("h3", { text: item.unlocked ? item.cat.name : "未认识的猫咪" }),
-        el("p", { class: "muted", text: item.unlocked ? `好感度 ${item.affection}` : "完成猫咪任务后解锁。" }),
-      ]),
-    );
-  });
-}
-
-function renderFriendImage(item) {
-  if (!item.unlocked) return el("div", { class: "collection-image small", text: "?" });
-  if (!item.cat?.avatar_url) return el("div", { class: "collection-image small", text: item.cat?.avatar_emoji || "猫" });
-  return el("figure", { class: "collection-image friend-image has-image" }, [
-    el("img", { src: item.cat.avatar_url, alt: `${item.cat.name || "猫咪"}头像`, loading: "lazy" }),
-  ]);
 }
 
 function renderCards(items) {

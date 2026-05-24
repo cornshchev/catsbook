@@ -29,6 +29,8 @@ insert into public.quests (id, slug, cat_id, title, description, type, game_key,
 
 
 
+
+
 on conflict (id) do update set
   slug = excluded.slug,
   cat_id = excluded.cat_id,
@@ -57,7 +59,7 @@ insert into public.posts (id, slug, cat_id, quest_id, body, image_label, image_p
   ('30000000-0000-0000-0000-000000000009', 'coco-welcome', '10000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000008', '太阳这么暖洋洋，一定也是大橘吧', '可可的见面卡片', 'posts/coco-post-1.jpg', 'quest_completed:baga-merge', 9),
   ('30000000-0000-0000-0000-000000000010', 'ending', '10000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000009', '至此这个游戏的MVP版本就结束啦！很不好意思把这个简陋的东西拿出来作为520礼物，从来自咩咩的灵感火花到整个项目的落地还是来之不易的，不许说我敷衍！整个游戏开发得很匆忙，如果有奇奇怪怪的bug请见谅>ω<，做这个网页项目还有个私心，就是想和你一起有一个共同的工作空间。麻雀虽小，但项目还是有完整的前端，后端，美术，测试，运维的流程的，我们的共同话题不必只局限于吃喝玩乐，还能够通过这样的方式一起学习，或许也对就业有所帮助（？）恭迎你来添砖加瓦⸜(>ᰔ<)⸝', '结束海报', 'posts/ending-post.png', 'quest_completed:coco-welcome', 10),
   ('30000000-0000-0000-0000-000000000011', 'A new beginning', '10000000-0000-0000-0000-000000000006', '20000000-0000-0000-0000-000000000010', '今天听说咪咪们都会刷猫书，是在这里吗？和咪咪的合影证明我不是陌生的两脚兽', '第一次看猫书的两脚兽', 'posts/miea-post-1.jpg', 'quest_completed:ending', 10)
-
+ 
 
 on conflict (id) do update set
   slug = excluded.slug,

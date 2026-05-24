@@ -28,6 +28,13 @@
           <a class="primary-link" href="./quests.html">查看任务列表</a>
         </aside>
         <section>
+          <div class="feed-toolbar" aria-label="帖子排序">
+            <span>查看顺序</span>
+            <div class="segmented-control">
+              <button id="sort-asc" class="active" type="button" aria-pressed="true">正序</button>
+              <button id="sort-desc" type="button" aria-pressed="false">倒序</button>
+            </div>
+          </div>
           <div id="feed-status"></div>
           <div id="post-list" class="post-list"></div>
         </section>

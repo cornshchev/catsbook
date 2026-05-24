@@ -145,6 +145,11 @@ h3 {
   font-size: 18px;
 }
 
+h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
 .auth-copy,
 .side-panel p,
 .muted {
@@ -346,6 +351,40 @@ input {
   gap: 16px;
 }
 
+.feed-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.segmented-control {
+  display: inline-flex;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.segmented-control button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.segmented-control button.active {
+  background: var(--accent);
+  color: #fffdf8;
+}
+
 .cat-grid {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
@@ -357,8 +396,25 @@ input {
 .post-card,
 .cat-card,
 .quest-card,
-.collection-card {
+.collection-card,
+.new-posts-notice {
   padding: 18px;
+}
+
+.new-posts-notice {
+  width: 100%;
+  border: 1px dashed rgba(229, 107, 79, 0.52);
+  border-radius: 8px;
+  background: rgba(229, 107, 79, 0.1);
+  color: var(--accent-strong);
+  font-weight: 900;
+  text-align: center;
+  box-shadow: none;
+}
+
+.new-posts-notice:hover,
+.new-posts-notice:focus-visible {
+  background: rgba(229, 107, 79, 0.16);
 }
 
 .profile-link {
@@ -376,6 +432,17 @@ input {
   margin-bottom: 14px;
 }
 
+.post-author-with-time {
+  justify-content: space-between;
+}
+
+.post-author-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .avatar {
   width: 46px;
   height: 46px;
@@ -390,6 +457,24 @@ input {
   object-fit: cover;
 }
 
+.avatar-button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.avatar-button:hover .avatar,
+.avatar-button:focus-visible .avatar {
+  outline: 3px solid rgba(229, 107, 79, 0.28);
+  outline-offset: 2px;
+}
+
 .small-avatar {
   width: 56px;
   height: 56px;
@@ -401,9 +486,55 @@ input {
   font-size: 14px;
 }
 
+.post-time {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+}
+
 .post-body {
   line-height: 1.75;
   margin: 12px 0;
+}
+
+.quest-preview {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 243, 221, 0.62);
+}
+
+.quest-preview > div:first-child {
+  min-width: 0;
+}
+
+.quest-preview-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.quest-preview-label {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.quest-preview p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .post-image,
@@ -597,6 +728,100 @@ dialog::backdrop {
   background: var(--surface);
 }
 
+.avatar-preview-dialog {
+  width: min(620px, calc(100% - 32px));
+}
+
+.avatar-preview-body {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  text-align: center;
+}
+
+.avatar-preview-body img {
+  width: 100%;
+  max-height: min(68vh, 620px);
+  display: block;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.avatar-preview-body h2,
+.avatar-preview-body p {
+  margin: 0;
+}
+
+.avatar-preview-body h2 + p {
+  margin-top: -6px;
+}
+
+.avatar-preview-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(255, 253, 248, 0.94);
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.reward-card-dialog {
+  width: min(520px, calc(100% - 32px));
+}
+
+.reward-card-body {
+  display: grid;
+  gap: 12px;
+}
+
+.reward-card-body .eyebrow,
+.reward-card-body h2,
+.reward-card-body p {
+  margin: 0;
+}
+
+.reward-card-image {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(229, 107, 79, 0.14), rgba(77, 166, 132, 0.16)),
+    #fffaf1;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.reward-card-image.has-image {
+  display: block;
+}
+
+.reward-card-image img {
+  display: block;
+  width: 100%;
+  max-height: 56vh;
+  object-fit: contain;
+  background: #fffaf1;
+}
+
+.reward-card-image figcaption {
+  padding: 9px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 @media (max-width: 760px) {
   .topbar {
     position: static;
@@ -631,5 +856,16 @@ dialog::backdrop {
 
   .auth-panel {
     padding: 24px;
+  }
+
+  .quest-preview {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quest-preview-actions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
