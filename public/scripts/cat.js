@@ -41,7 +41,7 @@ function renderCat(friend) {
 
   card.append(
     el("div", { class: "post-author" }, [
-      renderAvatar(cat),
+      renderAvatarButton(cat),
       el("div", {}, [
         el("h2", {}, [
           el("a", {
@@ -73,6 +73,53 @@ function renderInventory() {
     el("div", { class: "inventory-item" }, [el("span", { text: "猫条" }), el("strong", { text: inventory.treat })]),
     el("div", { class: "inventory-item" }, [el("span", { text: "玩具" }), el("strong", { text: inventory.toy })]),
   );
+}
+
+function renderAvatarButton(cat) {
+  return el("button", {
+    class: "avatar-button",
+    type: "button",
+    "aria-label": `查看${cat?.name || "猫咪"}头像大图`,
+    title: "查看头像大图",
+    onclick: () => showAvatarPreview(cat),
+  }, [renderAvatar(cat)]);
+}
+
+function showAvatarPreview(cat) {
+  const title = `${cat?.name || "猫咪"}的头像`;
+  if (!cat?.avatar_url) {
+    showDialog(title, ["这只猫咪暂时还没有头像图片。"]);
+    return;
+  }
+
+  const dialog = el("dialog", { class: "avatar-preview-dialog" });
+  const close = () => {
+    dialog.close();
+    dialog.remove();
+  };
+
+  dialog.append(
+    el("div", { class: "dialog-body avatar-preview-body" }, [
+      el("button", {
+        class: "avatar-preview-close",
+        type: "button",
+        "aria-label": "关闭头像大图",
+        title: "关闭",
+        text: "×",
+        onclick: close,
+      }),
+      el("img", { src: cat.avatar_url, alt: `${cat.name || "猫咪"}头像大图` }),
+      el("h2", { text: title }),
+      cat.handle ? el("p", { class: "muted", text: cat.handle }) : "",
+    ]),
+  );
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) close();
+  });
+
+  document.body.append(dialog);
+  dialog.showModal();
 }
 
 async function feed(catId, itemType) {

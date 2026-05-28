@@ -285,9 +285,16 @@ function isUnlocked(state, unlockKey) {
 function getQuestItemRewards(quest) {
   const difficulty = Math.max(Number(quest?.difficulty || 1), 1);
   return {
-    food: 1 + (difficulty - 1) * 2,
-    treat: (difficulty - 1),
+    food: 2 + difficulty * 2,
+    treat: 1 + difficulty,
     toy: difficulty >= 2 ? 1 + Math.floor(difficulty / 2) : 1,
+  };
+}
+
+export function getQuestRewards(quest) {
+  return {
+    affection: Number(quest?.reward_affection || 0),
+    items: getQuestItemRewards(quest),
   };
 }
 

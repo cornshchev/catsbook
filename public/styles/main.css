@@ -823,6 +823,48 @@ dialog::backdrop {
   font-weight: 800;
 }
 
+.reward-summary {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.reward-summary h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.reward-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reward-summary-item {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 243, 221, 0.78);
+  text-align: center;
+}
+
+.reward-summary-item span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.reward-summary-item strong {
+  color: var(--accent-strong);
+  font-size: 16px;
+}
+
 @media (max-width: 760px) {
   .topbar {
     position: static;
@@ -868,5 +910,9 @@ dialog::backdrop {
     align-items: flex-start;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .reward-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

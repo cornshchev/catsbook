@@ -102,6 +102,7 @@ begin
       'game_key', q.game_key,
       'difficulty', q.difficulty,
       'target_score', q.target_score,
+      'reward_affection', q.reward_affection,
       'reward_card_title', q.reward_card_title,
       'reward_card_text', q.reward_card_text,
       'reward_image_label', q.reward_image_label,

@@ -150,7 +150,7 @@ function renderPost(post) {
     ]),
     el("p", { class: "post-body", text: post.body }),
     renderPostImage(post),
-    post.quest ? renderQuestPreview(post.quest) : "",
+    post.quest ? renderQuestPreview({ ...post.quest, cat: post.cat }) : "",
     el("div", { class: "stat-row" }, [
       el("span", { text: post.liked ? "你已经给这条动态送出小鱼干赞" : "还没有点赞" }),
     ]),
@@ -342,16 +342,12 @@ async function handleQuest(quest) {
             await api.startQuest(playerId, quest.id);
             await api.completeQuest(playerId, quest.id);
             close();
+            showRewardCardPreview({ ...quest, status: "completed" });
             await showNewPostsNoticeIfNeeded();
           } catch (error) {
             setStatus(status, error.message, "error");
           }
         },
-      },
-      {
-        label: "查看感谢卡",
-        className: "ghost-btn",
-        onClick: () => showRewardCardPreview(quest),
       },
       { label: "稍后", className: "ghost-btn" },
     ]);
@@ -366,6 +362,7 @@ function showCompletedQuest(quest) {
     quest.description || "这条猫咪委托已经完成。",
     "状态：已完成",
     quest.reward_card_title ? `已获得：${quest.reward_card_title}` : "感谢卡已收入图鉴。",
+    getRewardSummaryText(quest),
   ], [
     {
       label: "查看感谢卡",
@@ -380,6 +377,7 @@ function showRewardCardPreview(quest) {
   const title = quest.reward_card_title || "猫咪感谢卡";
   const imageUrl = api.getResourceUrl(quest.reward_image_path);
   const imageLabel = quest.reward_image_label || "感谢卡图片";
+  const rewards = api.getQuestRewards(quest);
   const dialog = el("dialog", { class: "reward-card-dialog" });
   const close = () => {
     dialog.close();
@@ -407,6 +405,7 @@ function showRewardCardPreview(quest) {
       image,
       el("h2", { text: title }),
       el("p", { class: "muted", text: quest.reward_card_text || "完成任务后，这张卡片会收入图鉴。" }),
+      renderRewardSummary(quest, rewards),
     ]),
   );
 
@@ -416,4 +415,32 @@ function showRewardCardPreview(quest) {
 
   document.body.append(dialog);
   dialog.showModal();
+}
+
+function getRewardSummaryText(quest) {
+  const { affection, items } = api.getQuestRewards(quest);
+  return `已获得：${getQuestCatName(quest)}的好感度 +${affection}、猫粮 +${items.food}、猫条 +${items.treat}、玩具 +${items.toy}`;
+}
+
+function renderRewardSummary(quest, rewards) {
+  const items = [
+    { label: `${getQuestCatName(quest)}的好感度`, value: `+${rewards.affection}` },
+    { label: "猫粮", value: `+${rewards.items.food}` },
+    { label: "猫条", value: `+${rewards.items.treat}` },
+    { label: "玩具", value: `+${rewards.items.toy}` },
+  ];
+
+  return el("section", { class: "reward-summary", "aria-label": "任务获得内容" }, [
+    el("h3", { text: "任务获得" }),
+    el("div", { class: "reward-summary-grid" }, items.map((item) => (
+      el("div", { class: "reward-summary-item" }, [
+        el("span", { text: item.label }),
+        el("strong", { text: item.value }),
+      ])
+    ))),
+  ]);
+}
+
+function getQuestCatName(quest) {
+  return quest?.cat?.name || quest?.cat_name || "猫咪";
 }
