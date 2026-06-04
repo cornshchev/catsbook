@@ -2,6 +2,7 @@ alter table public.players enable row level security;
 alter table public.cats enable row level security;
 alter table public.quests enable row level security;
 alter table public.posts enable row level security;
+alter table public.post_images enable row level security;
 alter table public.post_likes enable row level security;
 alter table public.comments enable row level security;
 alter table public.player_quests enable row level security;
@@ -17,6 +18,7 @@ grant select, insert, update on public.players to authenticated;
 grant select on public.cats to authenticated;
 grant select on public.quests to authenticated;
 grant select on public.posts to authenticated;
+grant select on public.post_images to authenticated;
 grant select, insert, update on public.post_likes to authenticated;
 grant select, insert on public.comments to authenticated;
 grant select, insert, update on public.player_quests to authenticated;
@@ -43,6 +45,9 @@ create policy "quests_read_authenticated" on public.quests for select to authent
 
 drop policy if exists "posts_read_authenticated" on public.posts;
 create policy "posts_read_authenticated" on public.posts for select to authenticated using (true);
+
+drop policy if exists "post_images_read_authenticated" on public.post_images;
+create policy "post_images_read_authenticated" on public.post_images for select to authenticated using (true);
 
 drop policy if exists "post_likes_read_own" on public.post_likes;
 create policy "post_likes_read_own" on public.post_likes for select using (

@@ -4,13 +4,19 @@ import { $, clear, el, renderAvatar, renderState, setStatus, setupLogout, showDi
 const playerId = api.requirePlayer();
 const list = $("#post-list");
 const status = $("#feed-status");
+const filterAllButton = $("#filter-all");
+const filterCatsButton = $("#filter-cats");
+const filterHumansButton = $("#filter-humans");
 const sortAscButton = $("#sort-asc");
 const sortDescButton = $("#sort-desc");
+const HUMAN_AUTHOR_NAMES = new Set(["二狗", "咩咩"]);
+let activeFilter = "all";
 let sortDirection = "asc";
 let currentPosts = [];
 let hasPendingNewPosts = false;
 
 setupLogout(api);
+setupFilterControls();
 setupSortControls();
 loadFeed();
 
@@ -37,6 +43,25 @@ function setupSortControls() {
   sortDescButton?.addEventListener("click", () => setSortDirection("desc"));
 }
 
+function setupFilterControls() {
+  filterAllButton?.addEventListener("click", () => setActiveFilter("all"));
+  filterCatsButton?.addEventListener("click", () => setActiveFilter("cats"));
+  filterHumansButton?.addEventListener("click", () => setActiveFilter("humans"));
+}
+
+function setActiveFilter(filter) {
+  activeFilter = filter;
+  updateFilterButton(filterAllButton, filter === "all");
+  updateFilterButton(filterCatsButton, filter === "cats");
+  updateFilterButton(filterHumansButton, filter === "humans");
+  renderFeedPosts();
+}
+
+function updateFilterButton(button, isActive) {
+  button?.classList.toggle("active", isActive);
+  button?.setAttribute("aria-pressed", isActive ? "true" : "false");
+}
+
 function setSortDirection(direction) {
   sortDirection = direction;
   sortAscButton?.classList.toggle("active", direction === "asc");
@@ -52,7 +77,11 @@ function renderFeedPosts() {
     renderState(list, "时间线还是空的", "先完成一个任务，猫咪们就会慢慢出现。");
     return;
   }
-  const posts = getSortedPosts(currentPosts);
+  const posts = getSortedPosts(getFilteredPosts(currentPosts));
+  if (!posts.length) {
+    renderState(list, "这个分类暂时没有帖子", getEmptyFilterMessage());
+    return;
+  }
   if (hasPendingNewPosts && sortDirection === "desc") list.append(renderNewPostsNotice());
   posts.forEach((post) => {
     try {
@@ -63,6 +92,22 @@ function renderFeedPosts() {
     }
   });
   if (hasPendingNewPosts && sortDirection === "asc") list.append(renderNewPostsNotice());
+}
+
+function getFilteredPosts(posts) {
+  if (activeFilter === "humans") return posts.filter(isHumanPost);
+  if (activeFilter === "cats") return posts.filter((post) => !isHumanPost(post));
+  return posts;
+}
+
+function isHumanPost(post) {
+  return HUMAN_AUTHOR_NAMES.has(post?.cat?.name);
+}
+
+function getEmptyFilterMessage() {
+  if (activeFilter === "humans") return "二狗和咩咩还没有发布可见动态。";
+  if (activeFilter === "cats") return "猫猫们还在酝酿新的动态。";
+  return "先完成一个任务，猫咪们就会慢慢出现。";
 }
 
 function getSortedPosts(posts) {
@@ -187,8 +232,9 @@ function renderQuestPreview(quest) {
 }
 
 function getQuestTypeLabel(quest) {
-  if (quest.game_key === "fishing") return "钓鱼";
-  if (quest.game_key === "merge_cats") return "合成";
+  if (isGame(quest, "fishing")) return "钓鱼";
+  if (isGame(quest, "merge_cats")) return "合成";
+  if (isGame(quest, "paw_on_top")) return "猫爪";
   if (quest.type === "dialogue") return "对话";
   return quest.type || "任务";
 }
@@ -258,18 +304,105 @@ function showAvatarPreview(cat) {
 function getQuestButtonLabel(quest) {
   if (quest.status === "completed") return "已完成";
   if (quest.status === "active") return "继续任务";
-  if (quest.game_key === "fishing") return "接受钓鱼";
-  if (quest.game_key === "merge_cats") return "接受合成";
+  if (isGame(quest, "fishing")) return "接受钓鱼";
+  if (isGame(quest, "merge_cats")) return "接受合成";
+  if (isGame(quest, "paw_on_top")) return "接受猫爪挑战";
   if (quest.type === "dialogue") return "接受任务";
   return "查看任务";
 }
 
 function renderPostImage(post) {
-  if (!post.image_url) return el("div", { class: "post-image", text: post.image_label || "猫咪图片占位" });
-  return el("figure", { class: "post-image has-image" }, [
-    el("img", { src: post.image_url, alt: post.image_label || "猫咪帖子图片", loading: "lazy" }),
-    post.image_label ? el("figcaption", { text: post.image_label }) : "",
+  const images = getPostImages(post);
+  if (!images.length) return "";
+  const imageLabel = post.image_label || images[0]?.image_label || "";
+  if (images.length === 1) {
+    const image = images[0];
+    return el("figure", { class: "post-image has-image" }, [
+      renderPostImageButton(image, imageLabel || "猫咪帖子图片"),
+      imageLabel ? el("figcaption", { text: imageLabel }) : "",
+    ]);
+  }
+
+  return el("figure", { class: "post-image has-image post-gallery-wrap" }, [
+    el("div", { class: getPostGalleryClass(images.length), "aria-label": `${images.length} 张帖子图片` }, (
+      images.map((image, index) => renderPostGalleryItem(image, imageLabel, index, images.length))
+    )),
+    imageLabel ? el("figcaption", { text: imageLabel }) : "",
   ]);
+}
+
+function renderPostImageButton(image, altText) {
+  return el("button", {
+    class: "post-image-button",
+    type: "button",
+    "aria-label": "查看帖子图片大图",
+    title: "查看大图",
+    onclick: () => showPostImagePreview(image, altText),
+  }, [
+    el("img", { src: image.image_url, alt: altText, loading: "lazy" }),
+  ]);
+}
+
+function renderPostGalleryItem(image, imageLabel, index, total) {
+  const altText = imageLabel ? `${imageLabel} ${index + 1}` : `帖子图片 ${index + 1}`;
+  return el("div", { class: "post-gallery-item" }, [
+    el("button", {
+      class: "post-image-button",
+      type: "button",
+      "aria-label": `查看第 ${index + 1} 张帖子图片大图`,
+      title: "查看大图",
+      onclick: () => showPostImagePreview(image, altText, index + 1, total),
+    }, [
+      el("img", { src: image.image_url, alt: altText, loading: "lazy" }),
+    ]),
+  ]);
+}
+
+function showPostImagePreview(image, altText, index = 1, total = 1) {
+  if (!image?.image_url) return;
+  const title = total > 1 ? `${altText}（${index}/${total}）` : altText;
+  const dialog = el("dialog", { class: "avatar-preview-dialog post-image-preview-dialog" });
+  const close = () => {
+    dialog.close();
+    dialog.remove();
+  };
+
+  dialog.append(
+    el("div", { class: "dialog-body avatar-preview-body post-image-preview-body" }, [
+      el("button", {
+        class: "avatar-preview-close",
+        type: "button",
+        "aria-label": "关闭图片大图",
+        title: "关闭",
+        text: "×",
+        onclick: close,
+      }),
+      el("img", { src: image.image_url, alt: title }),
+      el("h2", { text: title }),
+    ]),
+  );
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) close();
+  });
+
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+function getPostImages(post) {
+  const images = Array.isArray(post.images) && post.images.length
+    ? post.images
+    : post.image_url
+      ? [{ image_url: post.image_url, image_label: post.image_label }]
+      : [];
+  return images.slice(0, 9).filter((image) => image.image_url);
+}
+
+function getPostGalleryClass(count) {
+  if (count === 2) return "post-gallery post-gallery-two";
+  if (count === 4) return "post-gallery post-gallery-four";
+  return "post-gallery post-gallery-grid";
 }
 
 async function likePost(postId) {
@@ -307,7 +440,7 @@ async function handleQuest(quest) {
     return;
   }
 
-  if (quest.game_key === "fishing") {
+  if (isGame(quest, "fishing")) {
     try {
       await api.startQuest(playerId, quest.id);
       api.setPendingFishingQuest(quest);
@@ -318,11 +451,22 @@ async function handleQuest(quest) {
     return;
   }
 
-  if (quest.game_key === "merge_cats") {
+  if (isGame(quest, "merge_cats")) {
     try {
       await api.startQuest(playerId, quest.id);
       api.setPendingMergeQuest(quest);
       window.location.href = "./merge.html";
+    } catch (error) {
+      setStatus(status, error.message, "error");
+    }
+    return;
+  }
+
+  if (isGame(quest, "paw_on_top")) {
+    try {
+      await api.startQuest(playerId, quest.id);
+      api.setPendingPawQuest(quest);
+      window.location.href = "./paw-on-top.html";
     } catch (error) {
       setStatus(status, error.message, "error");
     }
@@ -371,6 +515,14 @@ function showCompletedQuest(quest) {
     },
     { label: "知道了", className: "primary-btn" },
   ]);
+}
+
+function isGame(quest, gameKey) {
+  if (quest.game_key === gameKey) return true;
+  if (gameKey === "fishing") return quest.type === "fishing";
+  if (gameKey === "merge_cats") return quest.type === "merge";
+  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
+  return false;
 }
 
 function showRewardCardPreview(quest) {

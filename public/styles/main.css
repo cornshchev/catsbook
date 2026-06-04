@@ -354,12 +354,20 @@ input {
 .feed-toolbar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 14px;
   color: var(--muted);
   font-size: 14px;
   font-weight: 800;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .segmented-control {
@@ -561,6 +569,20 @@ input {
   background: #fffaf1;
 }
 
+.post-image-button {
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.post-image-button:hover img,
+.post-image-button:focus-visible img {
+  filter: brightness(0.96);
+}
+
 .collection-image.friend-image {
   aspect-ratio: 1 / 1;
   min-height: 170px;
@@ -581,6 +603,45 @@ input {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.post-gallery {
+  display: grid;
+  gap: 6px;
+  padding: 6px;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px 8px 0 0;
+}
+
+.post-gallery-wrap {
+  margin: 14px 0;
+}
+
+.post-gallery-two,
+.post-gallery-four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.post-gallery-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.post-gallery-item {
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  margin: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  background: #fffaf1;
+}
+
+.post-gallery-item img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .stat-row {
@@ -700,6 +761,21 @@ input {
   border: 2px solid #f0c177;
   background: #2b2135;
   image-rendering: pixelated;
+}
+
+.paw-game-card {
+  background: rgba(255, 253, 248, 0.96);
+}
+
+.paw-hud span {
+  border-color: var(--line);
+  background: #fffaf1;
+  color: var(--ink);
+  font-family: inherit;
+}
+
+.paw-game-card canvas {
+  background: #fff4dc;
 }
 
 canvas {

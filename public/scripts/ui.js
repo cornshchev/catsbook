@@ -38,6 +38,7 @@ export function formatQuestType(type) {
   const labels = {
     dialogue: "对话",
     merge: "合成",
+    paw_on_top: "猫爪",
     puzzle: "合成",
     fishing: "钓鱼",
     collect: "收集",

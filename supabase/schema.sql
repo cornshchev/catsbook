@@ -28,7 +28,7 @@ create table if not exists public.quests (
   cat_id uuid not null references public.cats(id) on delete cascade,
   title text not null,
   description text not null,
-  type text not null check (type in ('dialogue', 'merge', 'puzzle', 'fishing', 'collect', 'social')),
+  type text not null check (type in ('dialogue', 'merge', 'paw_on_top', 'puzzle', 'fishing', 'collect', 'social')),
   unlock_key text,
   reward_affection integer not null default 0,
   reward_card_title text not null,
@@ -50,7 +50,7 @@ where type in ('puzzle', 'merge')
   and (game_key in ('merge', 'merge_cats') or slug in ('box-puzzle', 'merge-cats', 'achi-cat-stack'));
 
 alter table public.quests add constraint quests_type_check
-  check (type in ('dialogue', 'merge', 'puzzle', 'fishing', 'collect', 'social'));
+  check (type in ('dialogue', 'merge', 'paw_on_top', 'puzzle', 'fishing', 'collect', 'social'));
 
 create table if not exists public.posts (
   id uuid primary key default gen_random_uuid(),
@@ -63,6 +63,16 @@ create table if not exists public.posts (
   unlock_key text,
   sort_order integer not null default 100,
   created_at timestamptz not null default now()
+);
+
+create table if not exists public.post_images (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  image_label text not null default '猫咪图片',
+  image_path text not null,
+  sort_order integer not null check (sort_order between 1 and 9),
+  created_at timestamptz not null default now(),
+  unique (post_id, sort_order)
 );
 
 create table if not exists public.post_likes (

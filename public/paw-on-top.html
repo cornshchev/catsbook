@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Catsbook | 猫爪在上</title>
+    <link rel="stylesheet" href="./styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand-mini" href="./feed.html"><span>猫</span>Catsbook</a>
+      <nav class="tabs" aria-label="主导航">
+        <a href="./feed.html">帖子</a>
+        <a href="./cat.html">好友</a>
+        <a href="./collections.html">图鉴</a>
+      </nav>
+      <a class="icon-text-btn" href="./account.html">账户</a>
+    </header>
+    <main class="page-shell game-shell">
+      <section class="page-heading">
+        <p class="eyebrow">拍爪练习室</p>
+        <h1>猫爪在上</h1>
+      </section>
+      <div class="game-card paw-game-card">
+        <div class="game-hud paw-hud">
+          <span id="paw-round">第 1 拍</span>
+          <span id="paw-score">命中 0 / 3 · 拍数 0 / 5</span>
+          <span id="paw-state">等待猫爪</span>
+        </div>
+        <canvas id="paw-canvas" width="760" height="480" aria-label="猫爪在上小游戏画布"></canvas>
+        <div class="button-row">
+          <button id="restart-paw" class="ghost-btn" type="button">重新开始</button>
+          <a class="primary-link" href="./feed.html">回到帖子</a>
+        </div>
+        <div id="paw-message" class="message" role="status"></div>
+      </div>
+    </main>
+    <script type="module" src="./scripts/paw-on-top.js"></script>
+  </body>
+</html>

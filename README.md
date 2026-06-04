@@ -21,6 +21,7 @@ public/
   collections.html        # 图鉴与感谢卡
   fishing.html            # Canvas 钓鱼小游戏
   merge.html              # 像素猫头合成小游戏
+  paw-on-top.html         # 猫爪在上拍爪小游戏
   account.html            # 玩家账户资料
   resources/              # 本地图片资源，按 posts/、cards/ 等子目录整理
   styles/main.css         # 全站共享样式
@@ -36,6 +37,7 @@ public/
     collections.js        # 图鉴页逻辑
     fishing.js            # 钓鱼小游戏逻辑
     merge.js              # 像素猫头合成逻辑
+    paw-on-top.js         # 猫爪在上逻辑
     account.js            # 账户页逻辑
 supabase/
   schema.sql              # 表结构
@@ -83,6 +85,7 @@ export const SUPABASE_ANON_KEY = "你的 Supabase anon public key";
 
 ```bash
 python3 -m http.server 5173 -d public
+python -m http.server 5173 -d public
 ```
 
 然后访问：
@@ -135,28 +138,38 @@ public/resources/avatars/mimi.png
 数据库只保存相对路径：
 
 - `cats.avatar_path`：猫咪头像，例如 `avatars/mimi.png`
-- `posts.image_path`：帖子图片，例如 `posts/window-sun.png`
+- `posts.image_label`：帖子所有图片共用的说明文字
+- `posts.image_path`：帖子图片路径；没有图片时填 `null`，多张图片时用逗号、中文逗号或换行分隔，最多 9 张
 - `quests.reward_image_path`：任务感谢卡图片，例如 `cards/mimi-window-card.png`
 - `thank_cards.image_path`：玩家实际获得的感谢卡图片，会在完成任务时由 RPC 自动写入
 
-前端在 `public/scripts/api.js` 里通过 `getResourceUrl()` 把这些路径转换成 `./resources/...`，页面会优先渲染图片；如果没有图片路径，就显示原来的文字占位。
+前端在 `public/scripts/api.js` 里通过 `getResourceUrl()` 把这些路径转换成 `./resources/...`。帖子没有图片时不会显示图片区；1 张图显示为大图；2 张和 4 张图显示为二宫格 / 四宫格；其他多图按九宫格尺寸自适应排列。
 
 ## 如何添加帖子和任务
 
 1. 在 `public.quests` 新增任务，设置：
-   - `type`：`dialogue`、`merge`、`fishing`、`collect`、`social`
-   - `game_key`：小游戏入口，例如 `fishing` 或 `merge_cats`。它不属于某只猫，任何猫咪任务都可以调用。
-   - `difficulty`：小游戏难度，数值越高越难。钓鱼会提升鱼移动速度和失败压力；合成会加快掉落节奏。
-   - `target_score`：合成小游戏的完成分数，钓鱼任务可以设为 `0`。
+   - `type`：`dialogue`、`merge`、`paw_on_top`、`fishing`、`collect`、`social`
+   - `game_key`：小游戏入口，例如 `fishing`、`merge_cats` 或 `paw_on_top`。它不属于某只猫，任何猫咪任务都可以调用。
+   - `difficulty`：小游戏难度，数值越高越难。钓鱼会提升鱼移动速度和失败压力；合成会加快掉落节奏；猫爪在上会缩短猫爪等待和停留时间。
+   - `target_score`：合成小游戏的完成分数，钓鱼和猫爪在上任务可以设为 `0`。
    - `unlock_key`：控制解锁条件
    - `reward_affection`：完成后增加的好感度
    - `reward_card_*`：感谢卡内容
    - 任务完成时还会按 `difficulty` 自动发放道具：猫粮 `2 + difficulty * 2`，猫条 `1 + difficulty`，玩具在难度 1 时给 `1`，难度 2 起为 `1 + floor(difficulty / 2)`。
 2. 在 `public.posts` 新增帖子，并把 `quest_id` 指向对应任务。
-3. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
-4. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
-5. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
-6. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
+3. 在 `public.posts.image_path` 写图片路径。单图写一个路径；多图直接写多个路径，用逗号、中文逗号或换行分隔；无图写 `null`。
+
+```sql
+-- 单图
+('帖子id', 'first-morning', ..., '图片说明', 'posts/mimi-post-1.jpg', ..., 1)
+
+-- 多图
+('帖子id', 'farm-1', ..., '图片说明', 'posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg', ..., 16)
+```
+4. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
+5. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
+6. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
+7. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
 
 ## 如何维护剧情
 

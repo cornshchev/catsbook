@@ -28,11 +28,21 @@
           <a class="primary-link" href="./quests.html">查看任务列表</a>
         </aside>
         <section>
-          <div class="feed-toolbar" aria-label="帖子排序">
-            <span>查看顺序</span>
-            <div class="segmented-control">
-              <button id="sort-asc" class="active" type="button" aria-pressed="true">正序</button>
-              <button id="sort-desc" type="button" aria-pressed="false">倒序</button>
+          <div class="feed-toolbar" aria-label="帖子筛选和排序">
+            <div class="toolbar-group">
+              <span>查看分类</span>
+              <div class="segmented-control">
+                <button id="filter-all" class="active" type="button" aria-pressed="true">全部</button>
+                <button id="filter-cats" type="button" aria-pressed="false">咪咪</button>
+                <button id="filter-humans" type="button" aria-pressed="false">两脚兽</button>
+              </div>
+            </div>
+            <div class="toolbar-group">
+              <span>查看顺序</span>
+              <div class="segmented-control">
+                <button id="sort-asc" class="active" type="button" aria-pressed="true">正序</button>
+                <button id="sort-desc" type="button" aria-pressed="false">倒序</button>
+              </div>
             </div>
           </div>
           <div id="feed-status"></div>

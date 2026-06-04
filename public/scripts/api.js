@@ -5,6 +5,7 @@ const PLAYER_KEY = "catsbook_player_id";
 const DEMO_KEY = "catsbook_demo_state";
 const PENDING_FISHING_QUEST_KEY = "catsbook_pending_fishing_quest";
 const PENDING_MERGE_QUEST_KEY = "catsbook_pending_merge_quest";
+const PENDING_PAW_QUEST_KEY = "catsbook_pending_paw_on_top_quest";
 const RESOURCE_BASE = "./resources/";
 
 const demoSeed = {
@@ -15,7 +16,7 @@ const demoSeed = {
       name: "米米",
       handle: "@mimi.sunpatch",
       avatar_emoji: "米",
-      avatar_path: "avatars/mimi.png",
+      avatar_path: "avatars/mimi.jpg",
       bio: "喜欢睡在窗边的三花猫，正在学习如何优雅地发帖。",
       personality: "温柔、慢热、会认真听你讲话",
       likes: ["猫条", "晒太阳", "浅蓝色毛线球"],
@@ -25,7 +26,7 @@ const demoSeed = {
       name: "阿池",
       handle: "@achi.river",
       avatar_emoji: "池",
-      avatar_path: "avatars/achi.png",
+      avatar_path: "avatars/gian.jpg",
       bio: "总在河边巡逻的狸花猫，坚信每条鱼都有自己的秘密。",
       personality: "行动派、有点嘴硬、遇到鱼会变得很专注",
       likes: ["小鱼干", "铃铛玩具", "雨后泥土味"],
@@ -35,7 +36,7 @@ const demoSeed = {
       name: "糯糯",
       handle: "@nono.box",
       avatar_emoji: "糯",
-      avatar_path: "avatars/nono.png",
+      avatar_path: "avatars/baga.jpg",
       bio: "纸箱发明家，正在筹备一场谜题展。",
       personality: "好奇、爱藏东西、说话像在绕圈",
       likes: ["纸箱", "羽毛棒", "南瓜垫子"],
@@ -48,7 +49,7 @@ const demoSeed = {
       cat_id: "cat-mimi",
       body: "新来的铲屎官你好。今天窗台的阳光很满，我把一半让给你。",
       image_label: "窗台阳光照片",
-      image_path: "posts/window-sun.png",
+      image_path: "posts/mimi-post-1.jpg",
       sort_order: 1,
       created_at: "2026-05-22T09:10:00+08:00",
       unlock_key: null,
@@ -60,7 +61,7 @@ const demoSeed = {
       cat_id: "cat-mimi",
       body: "刚刚收到一个赞！可以帮我检查一下这张猫书欢迎小纸条有没有写完整吗？",
       image_label: "写着欢迎词的小纸条",
-      image_path: "posts/welcome-note.png",
+      image_path: "posts/mimi-post-2.jpg",
       sort_order: 2,
       created_at: "2026-05-22T09:18:00+08:00",
       unlock_key: "liked_post:first-morning",
@@ -72,7 +73,7 @@ const demoSeed = {
       cat_id: "cat-achi",
       body: "河面在发亮。谁能帮我钓一条闪亮鱼？我会认真道谢，真的。",
       image_label: "小河和浮漂",
-      image_path: "posts/river-fishing.png",
+      image_path: "posts/mimi-post-3.jpg",
       sort_order: 3,
       created_at: "2026-05-22T20:30:00+08:00",
       unlock_key: "completed_welcome_dialogue",
@@ -84,7 +85,7 @@ const demoSeed = {
       cat_id: "cat-nono",
       body: "纸箱实验更新：我需要你把掉下来的像素小猫头合成起来。达到分数就算实验成功！",
       image_label: "像素猫头合成机",
-      image_path: "posts/merge-cats.png",
+      image_path: "posts/gian-post-2.jpg",
       sort_order: 4,
       created_at: "2026-05-23T14:00:00+08:00",
       unlock_key: "completed_welcome_dialogue",
@@ -96,7 +97,7 @@ const demoSeed = {
       cat_id: "cat-mimi",
       body: "雨后水沟里有会反光的小影子。谁能帮我试试更快的钓鱼节奏？",
       image_label: "雨后水沟钓点",
-      image_path: "posts/mimi-rain-fish.png",
+      image_path: "posts/mimi-post-4.jpg",
       sort_order: 5,
       created_at: "2026-05-23T18:20:00+08:00",
       unlock_key: "quest_completed:shiny-fish",
@@ -108,11 +109,35 @@ const demoSeed = {
       cat_id: "cat-achi",
       body: "巡逻记录缺一张合成实验图。别问为什么钓鱼猫也需要猫头合成机。",
       image_label: "河边临时合成台",
-      image_path: "posts/achi-cat-stack.png",
+      image_path: "posts/gian-post-1.jpg",
       sort_order: 6,
       created_at: "2026-05-24T11:40:00+08:00",
       unlock_key: "quest_completed:merge-cats",
       quest_id: "quest-achi-cat-stack",
+    },
+    {
+      id: "post-paw-on-top",
+      slug: "paw-on-top",
+      cat_id: "cat-mimi",
+      body: "今天练习猫爪在上。规则很简单：我伸爪，你拍中就算你赢；你伸太早，被我按住就算我赢。",
+      image_label: "一只准备出招的猫爪",
+      image_path: "posts/mimi-post-5.jpg",
+      sort_order: 7,
+      created_at: "2026-05-24T15:10:00+08:00",
+      unlock_key: "quest_completed:shiny-fish",
+      quest_id: "quest-paw-on-top",
+    },
+    {
+      id: "post-demo-gallery",
+      slug: "demo-gallery",
+      cat_id: "cat-mimi",
+      body: "今天相册整理完成：多图帖子也能像猫爪一样整齐排队。",
+      image_label: "多图相册",
+      image_path: "posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg, posts/farm-post-6.jpg",
+      sort_order: 8,
+      created_at: "2026-05-24T16:10:00+08:00",
+      unlock_key: null,
+      quest_id: null,
     },
   ],
   quests: [
@@ -201,6 +226,23 @@ const demoSeed = {
       reward_image_label: "河边像素猫头塔",
       reward_image_path: "cards/achi-merge-card.png",
     },
+    {
+      id: "quest-paw-on-top",
+      slug: "paw-on-top",
+      cat_id: "cat-mimi",
+      title: "猫爪在上练习赛",
+      description: "和米米玩一局轻松的拍手小游戏。看准猫爪伸出来的时机，按住或短按鼠标出手。",
+      type: "paw_on_top",
+      game_key: "paw_on_top",
+      difficulty: 1,
+      target_score: 0,
+      unlock_key: "quest_completed:shiny-fish",
+      reward_affection: 12,
+      reward_card_title: "米米的猫爪在上感谢卡",
+      reward_card_text: "你的反应很温柔，拍到了爪爪，也没有吓到猫。",
+      reward_image_label: "被轻轻拍到的猫爪",
+      reward_image_path: "cards/mimi-card-1.jpg",
+    },
   ],
   likes: [],
   questStates: {},
@@ -234,8 +276,7 @@ function writeDemo(state) {
 }
 
 function mergeById(baseItems, savedItems) {
-  const savedById = new Map(savedItems.map((item) => [item.id, item]));
-  return baseItems.map((item) => ({ ...item, ...savedById.get(item.id) })).concat(savedItems.filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id)));
+  return baseItems.concat(savedItems.filter((item) => !baseItems.some((baseItem) => baseItem.id === item.id)));
 }
 
 export function getResourceUrl(path) {
@@ -250,6 +291,54 @@ function withResourceImage(item, sourceKey = "image_path", targetKey = "image_ur
     ...item,
     [targetKey]: getResourceUrl(item?.[sourceKey]),
   };
+}
+
+function withPostImages(post) {
+  const normalizedPost = withResourceImage(post);
+  const postImages = parsePostImages(post?.images);
+  const imagePaths = parseImagePathList(post?.image_path);
+  const sourceImages = postImages.length
+    ? postImages
+    : imagePaths.map((imagePath, index) => ({
+        image_label: post?.image_label,
+        image_path: imagePath,
+        sort_order: index + 1,
+      }));
+  const images = sourceImages
+    .slice(0, 9)
+    .map((image, index) => ({
+      ...image,
+      image_label: image.image_label || post?.image_label || `帖子图片 ${index + 1}`,
+      image_url: image.image_url || getResourceUrl(image.image_path || image.path || image.url),
+      sort_order: image.sort_order || index + 1,
+    }))
+    .filter((image) => image.image_url);
+
+  return {
+    ...normalizedPost,
+    images,
+  };
+}
+
+function parsePostImages(images) {
+  if (Array.isArray(images)) return images;
+  if (typeof images !== "string" || !images.trim()) return [];
+  try {
+    const parsed = JSON.parse(images);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseImagePathList(imagePath) {
+  if (!imagePath) return [];
+  if (Array.isArray(imagePath)) return imagePath.filter(Boolean);
+  return String(imagePath)
+    .split(/[,，\n]/)
+    .map((path) => path.trim())
+    .filter(Boolean)
+    .slice(0, 9);
 }
 
 function shouldUseDemo() {
@@ -360,6 +449,26 @@ export function clearPendingMergeQuest() {
   localStorage.removeItem(PENDING_MERGE_QUEST_KEY);
 }
 
+export function setPendingPawQuest(quest) {
+  localStorage.setItem(
+    PENDING_PAW_QUEST_KEY,
+    JSON.stringify({
+      questId: quest.id,
+      difficulty: quest.difficulty || 1,
+      title: quest.title || "猫爪在上练习赛",
+    }),
+  );
+}
+
+export function getPendingPawQuest() {
+  const value = localStorage.getItem(PENDING_PAW_QUEST_KEY);
+  return value ? JSON.parse(value) : null;
+}
+
+export function clearPendingPawQuest() {
+  localStorage.removeItem(PENDING_PAW_QUEST_KEY);
+}
+
 export async function register(displayName, email, password) {
   if (shouldUseDemo()) {
     const state = readDemo();
@@ -419,6 +528,7 @@ export async function logout() {
   localStorage.removeItem(PLAYER_KEY);
   localStorage.removeItem(PENDING_FISHING_QUEST_KEY);
   localStorage.removeItem(PENDING_MERGE_QUEST_KEY);
+  localStorage.removeItem(PENDING_PAW_QUEST_KEY);
   if (hasSupabaseConfig && supabase) await supabase.auth.signOut();
 }
 
@@ -457,7 +567,7 @@ export async function listFeedPosts(playerId) {
       .filter((post) => isUnlocked(state, post.unlock_key))
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((post) => ({
-        ...withResourceImage(post),
+        ...withPostImages(post),
         cat: getCat(state, post.cat_id),
         quest: getPostQuest(state, post.quest_id),
         liked: state.likes.includes(post.id),
@@ -468,7 +578,7 @@ export async function listFeedPosts(playerId) {
   const { data, error } = await supabase.rpc("get_feed_posts", { p_player_id: playerId });
   if (error) throw new Error(normalizeError(error));
   return (data || []).map((post) => ({
-    ...withResourceImage(post),
+    ...withPostImages(post),
     cat: withCatResource(post.cat),
     quest: normalizeFeedQuest(post.quest),
   }));
@@ -478,8 +588,19 @@ function normalizeFeedQuest(quest) {
   if (!quest) return null;
   return {
     ...quest,
+    game_key: normalizeGameKey(quest),
     status: quest.status || "available",
   };
+}
+
+function normalizeGameKey(quest) {
+  if (!quest) return null;
+  if (quest.game_key) return quest.game_key;
+  if (quest.type === "fishing") return "fishing";
+  if (quest.type === "merge") return "merge_cats";
+  if (quest.type === "paw_on_top") return "paw_on_top";
+  if (quest.type === "dialogue") return "dialogue";
+  return quest.game_key || null;
 }
 
 function getPostQuest(state, questId) {
@@ -487,6 +608,7 @@ function getPostQuest(state, questId) {
   if (!quest) return null;
   return {
     ...quest,
+    game_key: normalizeGameKey(quest),
     status: state.questStates[quest.id] || "available",
   };
 }
@@ -529,6 +651,7 @@ export async function listQuests(playerId) {
   if (error) throw new Error(normalizeError(error));
   return (data || []).map((quest) => ({
     ...quest,
+    game_key: normalizeGameKey(quest),
     cat: withCatResource(quest.cat),
   }));
 }
@@ -645,6 +768,7 @@ export async function getCollections(playerId) {
     const games = [
       { id: "fishing", title: "钓鱼小游戏", description: "重玩已解锁的钓鱼玩法", href: "./fishing.html", unlocked: state.quests.some((quest) => quest.game_key === "fishing" && state.questStates[quest.id] === "completed") },
       { id: "merge-cats", title: "合成大猫咪", description: "重玩已解锁的合成玩法", href: "./merge.html", unlocked: state.quests.some((quest) => quest.game_key === "merge_cats" && state.questStates[quest.id] === "completed") },
+      { id: "paw-on-top", title: "猫爪在上", description: "重玩已解锁的拍爪玩法", href: "./paw-on-top.html", unlocked: state.quests.some((quest) => quest.game_key === "paw_on_top" && state.questStates[quest.id] === "completed") },
     ];
     return { friends, cards, games };
   }

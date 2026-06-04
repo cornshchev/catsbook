@@ -233,8 +233,9 @@ function renderPost(post) {
 
 /** 获取任务按钮文字 */
 function getQuestButtonLabel(quest) {
-  if (quest.game_key === "fishing") return "接受钓鱼任务";
-  if (quest.game_key === "merge_cats") return "接受游戏任务";
+  if (isGame(quest, "fishing")) return "接受钓鱼任务";
+  if (isGame(quest, "merge_cats")) return "接受游戏任务";
+  if (isGame(quest, "paw_on_top")) return "接受猫爪挑战";
   return "查看任务";
 }
 
@@ -280,7 +281,7 @@ function commentPost(postId) {
 
 /** 处理任务按钮点击 */
 async function handleQuest(quest) {
-  if (quest.game_key === "fishing") {
+  if (isGame(quest, "fishing")) {
     try {
       await api.startQuest(playerId, quest.id);
       api.setPendingFishingQuest(quest);
@@ -291,11 +292,22 @@ async function handleQuest(quest) {
     return;
   }
 
-  if (quest.game_key === "merge_cats") {
+  if (isGame(quest, "merge_cats")) {
     try {
       await api.startQuest(playerId, quest.id);
       api.setPendingMergeQuest(quest);
       window.location.href = "./merge.html";
+    } catch (error) {
+      setStatus(status, error.message, "error");
+    }
+    return;
+  }
+
+  if (isGame(quest, "paw_on_top")) {
+    try {
+      await api.startQuest(playerId, quest.id);
+      api.setPendingPawQuest(quest);
+      window.location.href = "./paw-on-top.html";
     } catch (error) {
       setStatus(status, error.message, "error");
     }
@@ -324,4 +336,12 @@ async function handleQuest(quest) {
   }
 
   window.location.href = "./quests.html";
+}
+
+function isGame(quest, gameKey) {
+  if (quest.game_key === gameKey) return true;
+  if (gameKey === "fishing") return quest.type === "fishing";
+  if (gameKey === "merge_cats") return quest.type === "merge";
+  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
+  return false;
 }

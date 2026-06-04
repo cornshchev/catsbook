@@ -62,28 +62,43 @@ function getRewardText(quest) {
 }
 
 function getQuestGameMeta(quest) {
-  if (quest.game_key === "fishing") return `小游戏：钓鱼 · 鱼速难度 ${quest.target_score || 1}`;
-  if (quest.game_key === "merge_cats") return `小游戏：合成 · 目标分数 ${quest.target_score || 260} · 难度 ${quest.difficulty || 1}`;
+  if (isGame(quest, "fishing")) return `小游戏：钓鱼 · 鱼速难度 ${quest.target_score || 1}`;
+  if (isGame(quest, "merge_cats")) return `小游戏：合成 · 目标分数 ${quest.target_score || 260} · 难度 ${quest.difficulty || 1}`;
+  if (isGame(quest, "paw_on_top")) return `小游戏：猫爪在上 · 难度 ${quest.difficulty || 1}`;
   return `小游戏：${quest.game_key}`;
 }
 
 function getQuestActionLabel(quest) {
-  if (quest.game_key === "fishing") return "进入钓鱼";
-  if (quest.game_key === "merge_cats") return "进入合成";
+  if (isGame(quest, "fishing")) return "进入钓鱼";
+  if (isGame(quest, "merge_cats")) return "进入合成";
+  if (isGame(quest, "paw_on_top")) return "进入猫爪在上";
   return "完成任务";
 }
 
 function openQuestGame(quest) {
-  if (quest.game_key === "fishing") {
+  if (isGame(quest, "fishing")) {
     api.setPendingFishingQuest(quest);
     window.location.href = "./fishing.html";
     return true;
   }
-  if (quest.game_key === "merge_cats") {
+  if (isGame(quest, "merge_cats")) {
     api.setPendingMergeQuest(quest);
     window.location.href = "./merge.html";
     return true;
   }
+  if (isGame(quest, "paw_on_top")) {
+    api.setPendingPawQuest(quest);
+    window.location.href = "./paw-on-top.html";
+    return true;
+  }
+  return false;
+}
+
+function isGame(quest, gameKey) {
+  if (quest.game_key === gameKey) return true;
+  if (gameKey === "fishing") return quest.type === "fishing";
+  if (gameKey === "merge_cats") return quest.type === "merge";
+  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
   return false;
 }
 

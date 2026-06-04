@@ -58,6 +58,7 @@ returns table (
   body text,
   image_label text,
   image_path text,
+  images jsonb,
   sort_order integer,
   created_at timestamptz,
   quest_id uuid,
@@ -80,6 +81,27 @@ begin
     p.body,
     p.image_label,
     p.image_path,
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', p.id::text || '-' || paths.sort_order::text,
+          'image_label', p.image_label,
+          'image_path', paths.image_path,
+          'sort_order', paths.sort_order
+        )
+        order by paths.sort_order
+      )
+      from (
+        select
+          nullif(trim(path_item), '') as image_path,
+          path_order::integer as sort_order
+        from regexp_split_to_table(coalesce(p.image_path, ''), E'\\s*[,，\\n]\\s*')
+          with ordinality as split_paths(path_item, path_order)
+        where nullif(trim(path_item), '') is not null
+        order by path_order
+        limit 9
+      ) paths
+    ), '[]'::jsonb) as images,
     p.sort_order,
     p.created_at,
     p.quest_id,
@@ -445,6 +467,18 @@ begin
         from public.player_quests pq
         join public.quests q on q.id = pq.quest_id
         where pq.player_id = p_player_id and q.game_key = 'merge_cats' and pq.status = 'completed'
+      )
+    ),
+    jsonb_build_object(
+      'id', 'paw-on-top',
+      'title', '猫爪在上',
+      'description', '重玩已解锁的拍爪玩法',
+      'href', './paw-on-top.html',
+      'unlocked', exists (
+        select 1
+        from public.player_quests pq
+        join public.quests q on q.id = pq.quest_id
+        where pq.player_id = p_player_id and q.game_key = 'paw_on_top' and pq.status = 'completed'
       )
     )
   );
