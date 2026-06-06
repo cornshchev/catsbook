@@ -5,6 +5,10 @@ alter table public.posts enable row level security;
 alter table public.post_images enable row level security;
 alter table public.post_likes enable row level security;
 alter table public.comments enable row level security;
+alter table public.comment_reply_rules enable row level security;
+alter table public.comment_reply_outputs enable row level security;
+alter table public.comment_likes enable row level security;
+alter table public.player_comment_rule_triggers enable row level security;
 alter table public.player_quests enable row level security;
 alter table public.player_cats enable row level security;
 alter table public.player_items enable row level security;
@@ -21,6 +25,10 @@ grant select on public.posts to authenticated;
 grant select on public.post_images to authenticated;
 grant select, insert, update on public.post_likes to authenticated;
 grant select, insert on public.comments to authenticated;
+grant select on public.comment_reply_rules to authenticated;
+grant select on public.comment_reply_outputs to authenticated;
+grant select, insert on public.comment_likes to authenticated;
+grant select on public.player_comment_rule_triggers to authenticated;
 grant select, insert, update on public.player_quests to authenticated;
 grant select, insert, update on public.player_cats to authenticated;
 grant select, insert, update on public.player_items to authenticated;
@@ -71,6 +79,30 @@ create policy "comments_read_authenticated" on public.comments for select to aut
 
 drop policy if exists "comments_insert_own" on public.comments;
 create policy "comments_insert_own" on public.comments for insert with check (
+  author_type = 'player'
+  and cat_id is null
+  and
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
+drop policy if exists "comment_reply_rules_read_authenticated" on public.comment_reply_rules;
+create policy "comment_reply_rules_read_authenticated" on public.comment_reply_rules for select to authenticated using (true);
+
+drop policy if exists "comment_reply_outputs_read_authenticated" on public.comment_reply_outputs;
+create policy "comment_reply_outputs_read_authenticated" on public.comment_reply_outputs for select to authenticated using (true);
+
+drop policy if exists "comment_likes_read_own" on public.comment_likes;
+create policy "comment_likes_read_own" on public.comment_likes for select using (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
+drop policy if exists "comment_likes_insert_own" on public.comment_likes;
+create policy "comment_likes_insert_own" on public.comment_likes for insert with check (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
+drop policy if exists "player_comment_rule_triggers_read_own" on public.player_comment_rule_triggers;
+create policy "player_comment_rule_triggers_read_own" on public.player_comment_rule_triggers for select using (
   exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
 );
 

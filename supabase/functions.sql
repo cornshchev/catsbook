@@ -61,10 +61,13 @@ returns table (
   images jsonb,
   sort_order integer,
   created_at timestamptz,
+  comment_mode text,
+  fixed_comment_body text,
   quest_id uuid,
   cat jsonb,
   quest jsonb,
-  liked boolean
+  liked boolean,
+  comments jsonb
 )
 language plpgsql
 security definer
@@ -104,6 +107,8 @@ begin
     ), '[]'::jsonb) as images,
     p.sort_order,
     p.created_at,
+    p.comment_mode,
+    p.fixed_comment_body,
     p.quest_id,
     jsonb_build_object(
       'id', c.id,
@@ -134,7 +139,37 @@ begin
     exists (
       select 1 from public.post_likes pl
       where pl.player_id = p_player_id and pl.post_id = p.id
-    ) as liked
+    ) as liked,
+    coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', cm.id,
+          'slug', cm.slug,
+          'post_id', cm.post_id,
+          'parent_comment_id', cm.parent_comment_id,
+          'player_id', cm.player_id,
+          'cat_id', cm.cat_id,
+          'author_type', cm.author_type,
+          'source_type', cm.source_type,
+          'body', cm.body,
+          'sort_order', cm.sort_order,
+          'created_at', cm.created_at,
+          'author_name', case when cm.author_type = 'cat' then cc.name else cp.display_name end,
+          'author_handle', case when cm.author_type = 'cat' then cc.handle else '玩家评论' end,
+          'author_avatar_emoji', case when cm.author_type = 'cat' then cc.avatar_emoji else '你' end,
+          'author_avatar_path', case when cm.author_type = 'cat' then cc.avatar_path else null end,
+          'liked', exists (
+            select 1 from public.comment_likes cl
+            where cl.player_id = p_player_id and cl.comment_id = cm.id
+          )
+        )
+        order by cm.sort_order, cm.created_at, cm.id
+      )
+      from public.comments cm
+      left join public.cats cc on cc.id = cm.cat_id
+      left join public.players cp on cp.id = cm.player_id
+      where cm.post_id = p.id
+    ), '[]'::jsonb) as comments
   from public.posts p
   join public.cats c on c.id = p.cat_id
   left join public.quests q on q.id = p.quest_id
@@ -487,6 +522,239 @@ begin
 end;
 $$;
 
+-- 判断评论是否命中某条自动回复规则。正则写错时返回 false，避免影响评论提交。
+create or replace function public.comment_rule_matches(p_match_type text, p_keyword text, p_body text)
+returns boolean
+language plpgsql
+immutable
+as $$
+begin
+  if coalesce(trim(p_keyword), '') = '' or coalesce(trim(p_body), '') = '' then
+    return false;
+  end if;
+
+  if p_match_type = 'fixed' then
+    return true;
+  end if;
+
+  if p_match_type = 'exact' then
+    return lower(trim(p_body)) = lower(trim(p_keyword));
+  end if;
+
+  if p_match_type = 'regex' then
+    begin
+      return p_body ~* p_keyword;
+    exception when invalid_regular_expression then
+      return false;
+    end;
+  end if;
+
+  return position(lower(p_keyword) in lower(p_body)) > 0;
+end;
+$$;
+
+-- 创建玩家评论，并按帖子配置和自动回复规则插入猫咪回复。
+create or replace function public.create_post_comment(p_player_id uuid, p_post_id uuid, p_body text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_post public.posts%rowtype;
+  v_comment public.comments%rowtype;
+  v_rule public.comment_reply_rules%rowtype;
+  v_output record;
+  v_reply public.comments%rowtype;
+  v_parent_comment_id uuid;
+  v_previous_reply_id uuid;
+  v_auto_reply_count integer := 0;
+  v_comments jsonb;
+  v_body text;
+begin
+  perform public.assert_player_owner(p_player_id);
+
+  v_body := trim(coalesce(p_body, ''));
+
+  if char_length(v_body) < 1 or char_length(v_body) > 280 then
+    raise exception '评论需要写 1 到 280 个字。';
+  end if;
+
+  select * into v_post
+  from public.posts
+  where id = p_post_id;
+
+  if not found or not public.is_unlocked(p_player_id, v_post.unlock_key) then
+    raise exception '这条猫咪动态暂时还不能评论。';
+  end if;
+
+  if v_post.comment_mode = 'fixed' then
+    if coalesce(trim(v_post.fixed_comment_body), '') = '' then
+      raise exception '这条动态暂时没有可发送的剧情评论。';
+    end if;
+    v_body := trim(v_post.fixed_comment_body);
+
+    if exists (
+      select 1
+      from public.comments c
+      where c.post_id = p_post_id
+        and c.player_id = p_player_id
+        and c.author_type = 'player'
+        and c.source_type = 'player'
+    ) then
+      raise exception '这条剧情评论已经发送过啦。';
+    end if;
+  end if;
+
+  insert into public.comments (player_id, post_id, author_type, source_type, body, sort_order)
+  values (p_player_id, p_post_id, 'player', 'player', v_body, 1000)
+  returning * into v_comment;
+
+  select r.* into v_rule
+  from public.comment_reply_rules r
+  where r.is_enabled
+    and (r.cat_id is null or r.cat_id = v_post.cat_id)
+    and (r.post_id is null or r.post_id = p_post_id)
+    and (
+      (v_post.comment_mode = 'fixed' and r.match_type = 'fixed')
+      or (r.match_type <> 'fixed' and public.comment_rule_matches(r.match_type, r.keyword, v_body))
+    )
+    and (
+      not r.once_per_player
+      or not exists (
+        select 1
+        from public.player_comment_rule_triggers t
+        where t.player_id = p_player_id and t.rule_id = r.id
+      )
+    )
+  order by r.sort_order, r.created_at
+  limit 1;
+
+  if found then
+    if v_rule.once_per_player then
+      insert into public.player_comment_rule_triggers (player_id, rule_id, comment_id)
+      values (p_player_id, v_rule.id, v_comment.id)
+      on conflict (player_id, rule_id) do nothing;
+    end if;
+
+    v_previous_reply_id := null;
+    for v_output in
+      select *
+      from public.comment_reply_outputs
+      where rule_id = v_rule.id
+      order by sort_order, created_at
+    loop
+      v_parent_comment_id := case v_output.parent_target
+        when 'root' then null
+        when 'previous_reply' then coalesce(v_previous_reply_id, v_comment.id)
+        else v_comment.id
+      end;
+
+      insert into public.comments (post_id, parent_comment_id, cat_id, author_type, source_type, body, sort_order)
+      values (
+        p_post_id,
+        v_parent_comment_id,
+        v_output.reply_cat_id,
+        'cat',
+        'auto_reply',
+        v_output.body,
+        1000 + v_output.sort_order
+      )
+      returning * into v_reply;
+
+      v_previous_reply_id := v_reply.id;
+      v_auto_reply_count := v_auto_reply_count + 1;
+    end loop;
+  end if;
+
+  select coalesce(jsonb_agg(
+    jsonb_build_object(
+      'id', cm.id,
+      'slug', cm.slug,
+      'post_id', cm.post_id,
+      'parent_comment_id', cm.parent_comment_id,
+      'player_id', cm.player_id,
+      'cat_id', cm.cat_id,
+      'author_type', cm.author_type,
+      'source_type', cm.source_type,
+      'body', cm.body,
+      'sort_order', cm.sort_order,
+      'created_at', cm.created_at,
+      'author_name', case when cm.author_type = 'cat' then cc.name else cp.display_name end,
+      'author_handle', case when cm.author_type = 'cat' then cc.handle else '玩家评论' end,
+      'author_avatar_emoji', case when cm.author_type = 'cat' then cc.avatar_emoji else '你' end,
+      'author_avatar_path', case when cm.author_type = 'cat' then cc.avatar_path else null end,
+      'liked', exists (
+        select 1 from public.comment_likes cl
+        where cl.player_id = p_player_id and cl.comment_id = cm.id
+      )
+    )
+    order by cm.sort_order, cm.created_at, cm.id
+  ), '[]'::jsonb)
+  into v_comments
+  from public.comments cm
+  left join public.cats cc on cc.id = cm.cat_id
+  left join public.players cp on cp.id = cm.player_id
+  where cm.post_id = p_post_id;
+
+  return jsonb_build_object(
+    'comment', to_jsonb(v_comment),
+    'auto_reply_count', v_auto_reply_count,
+    'comments', v_comments
+  );
+end;
+$$;
+
+-- 点赞评论并奖励猫粮 +1。重复点赞不会重复给奖励。
+create or replace function public.like_comment(p_player_id uuid, p_comment_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row_count integer := 0;
+begin
+  perform public.assert_player_owner(p_player_id);
+
+  if not exists (
+    select 1
+    from public.comments c
+    join public.posts p on p.id = c.post_id
+    where c.id = p_comment_id
+      and public.is_unlocked(p_player_id, p.unlock_key)
+  ) then
+    raise exception '这条评论暂时不能点赞。';
+  end if;
+
+  if exists (
+    select 1
+    from public.comments c
+    where c.id = p_comment_id
+      and c.author_type = 'player'
+      and c.player_id = p_player_id
+  ) then
+    raise exception '不能给自己的评论点赞。';
+  end if;
+
+  insert into public.comment_likes (player_id, comment_id)
+  values (p_player_id, p_comment_id)
+  on conflict (player_id, comment_id) do nothing;
+
+  get diagnostics v_row_count = row_count;
+
+  if v_row_count > 0 then
+    insert into public.player_items (player_id, item_type, quantity, updated_at)
+    values (p_player_id, 'food', 1, now())
+    on conflict (player_id, item_type) do update
+    set quantity = public.player_items.quantity + 1,
+        updated_at = now();
+  end if;
+
+  return jsonb_build_object('liked', true, 'reward_food', case when v_row_count > 0 then 1 else 0 end);
+end;
+$$;
+
 grant execute on function public.assert_player_owner(uuid) to authenticated;
 grant execute on function public.is_unlocked(uuid, text) to authenticated;
 grant execute on function public.get_feed_posts(uuid) to authenticated;
@@ -497,3 +765,6 @@ grant execute on function public.feed_cat(uuid, uuid, text) to authenticated;
 grant execute on function public.get_player_items(uuid) to authenticated;
 grant execute on function public.get_cat_friends(uuid) to authenticated;
 grant execute on function public.get_collections(uuid) to authenticated;
+grant execute on function public.comment_rule_matches(text, text, text) to authenticated;
+grant execute on function public.create_post_comment(uuid, uuid, text) to authenticated;
+grant execute on function public.like_comment(uuid, uuid) to authenticated;

@@ -1,0 +1,42 @@
+{
+  "Catsbook seed post row": {
+    "scope": "sql",
+    "prefix": "cbpost",
+    "body": [
+      "('${1:30000000-0000-0000-0000-000000000000}', '${2:post-slug}', public.seed_cat_id('${3:cat-slug}'), public.seed_quest_id('${4:quest-slug}'), '${5:post-body}', '${6:image-label}', 'posts/${7:image.jpg}', 'quest_completed:${8:quest-slug}', '${9:free}', ${10:null}, ${11:sort_order}, ${12:default}),"
+    ],
+    "description": "Catsbook posts seed row"
+  },
+  "Catsbook seed quest row": {
+    "scope": "sql",
+    "prefix": "cbquest",
+    "body": [
+      "('${1:20000000-0000-0000-0000-000000000000}', '${2:quest-slug}', public.seed_cat_id('${3:cat-slug}'), '${4:quest-title}', '${5:quest-description}', '${6:dialogue}', '${7:dialogue}', ${8:1}, ${9:0}, 'quest_completed:${10:quest-slug}', ${11:10}, '${12:card-title}', '${13:card-body}', '${14:card-image-label}', 'cards/${15:image.jpg}'),"
+    ],
+    "description": "Catsbook quests seed row"
+  },
+  "Catsbook seed cat row": {
+    "scope": "sql",
+    "prefix": "cbcat",
+    "body": [
+      "('${1:10000000-0000-0000-0000-000000000000}', '${2:cat-slug}', '${3:cat-name}', '${4:cat@catsbook.com}', '${5:avatar-text}', 'avatars/${6:image.jpg}', '${7:bio}', '${8:personality}', array['${9:like-item}']),"
+    ],
+    "description": "Catsbook cats seed row"
+  },
+  "Catsbook seed dialogue row": {
+    "scope": "sql",
+    "prefix": "cbdialogue",
+    "body": [
+      "('${1:40000000-0000-0000-0000-000000000000}', public.seed_cat_id('${2:cat-slug}'), '${3:dialogue-slug}', '${4:dialogue-title}', '${5:dialogue-body}', ${6:0}, ${7:sort_order}),"
+    ],
+    "description": "Catsbook dialogue_nodes seed row"
+  },
+  "Catsbook seed reply rule row": {
+    "scope": "sql",
+    "prefix": "cbreply",
+    "body": [
+      "('${1:50000000-0000-0000-0000-000000000000}', '${2:rule-slug}', public.seed_cat_id('${3:cat-slug}'), ${4:null}, '${5:contains}', '${6:keyword}', ${7:false}, ${8:sort_order}, ${9:true}),"
+    ],
+    "description": "Catsbook comment_reply_rules seed row"
+  }
+}

@@ -61,9 +61,25 @@ create table if not exists public.posts (
   image_label text not null default '猫咪图片占位',
   image_path text,
   unlock_key text,
+  comment_mode text not null default 'free' check (comment_mode in ('free', 'fixed')),
+  fixed_comment_body text check (fixed_comment_body is null or char_length(fixed_comment_body) between 1 and 280),
   sort_order integer not null default 100,
   created_at timestamptz not null default now()
 );
+
+alter table public.posts add column if not exists comment_mode text not null default 'free';
+alter table public.posts add column if not exists fixed_comment_body text;
+
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'posts_comment_mode_check') then
+    alter table public.posts drop constraint posts_comment_mode_check;
+  end if;
+  alter table public.posts
+    add constraint posts_comment_mode_check check (comment_mode in ('free', 'fixed'));
+exception when duplicate_object then
+  null;
+end $$;
 
 create table if not exists public.post_images (
   id uuid primary key default gen_random_uuid(),
@@ -84,10 +100,109 @@ create table if not exists public.post_likes (
 
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
-  player_id uuid not null references public.players(id) on delete cascade,
+  slug text unique,
+  player_id uuid references public.players(id) on delete cascade,
   post_id uuid not null references public.posts(id) on delete cascade,
+  parent_comment_id uuid references public.comments(id) on delete cascade,
+  cat_id uuid references public.cats(id) on delete cascade,
+  author_type text not null default 'player' check (author_type in ('player', 'cat')),
+  source_type text not null default 'player' check (source_type in ('player', 'preset', 'auto_reply')),
   body text not null check (char_length(body) between 1 and 280),
+  sort_order integer not null default 100,
+  created_at timestamptz not null default now(),
+  check (
+    (author_type = 'player' and player_id is not null and cat_id is null)
+    or (author_type = 'cat' and cat_id is not null and player_id is null)
+  )
+);
+
+-- 兼容已创建过旧版 comments 表的数据库。
+alter table public.comments alter column player_id drop not null;
+alter table public.comments add column if not exists slug text unique;
+alter table public.comments add column if not exists parent_comment_id uuid references public.comments(id) on delete cascade;
+alter table public.comments add column if not exists cat_id uuid references public.cats(id) on delete cascade;
+alter table public.comments add column if not exists author_type text not null default 'player';
+alter table public.comments add column if not exists source_type text not null default 'player';
+alter table public.comments add column if not exists sort_order integer not null default 100;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'comments_author_type_check'
+  ) then
+    alter table public.comments
+      add constraint comments_author_type_check check (author_type in ('player', 'cat'));
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'comments_author_identity_check'
+  ) then
+    alter table public.comments
+      add constraint comments_author_identity_check check (
+        (author_type = 'player' and player_id is not null and cat_id is null)
+        or (author_type = 'cat' and cat_id is not null and player_id is null)
+      );
+  end if;
+
+  if exists (select 1 from pg_constraint where conname = 'comments_source_type_check') then
+    alter table public.comments drop constraint comments_source_type_check;
+  end if;
+  alter table public.comments
+    add constraint comments_source_type_check check (source_type in ('player', 'preset', 'auto_reply'));
+end $$;
+
+create table if not exists public.comment_reply_rules (
+  id uuid primary key default gen_random_uuid(),
+  slug text unique,
+  cat_id uuid references public.cats(id) on delete cascade,
+  post_id uuid references public.posts(id) on delete cascade,
+  match_type text not null default 'contains' check (match_type in ('contains', 'exact', 'regex', 'fixed')),
+  keyword text check (keyword is null or char_length(keyword) between 1 and 80),
+  once_per_player boolean not null default false,
+  is_enabled boolean not null default true,
+  sort_order integer not null default 100,
   created_at timestamptz not null default now()
+);
+
+alter table public.comment_reply_rules add column if not exists slug text unique;
+alter table public.comment_reply_rules alter column cat_id drop not null;
+alter table public.comment_reply_rules alter column keyword drop not null;
+alter table public.comment_reply_rules drop column if exists reply_body;
+
+do $$
+begin
+  if exists (select 1 from pg_constraint where conname = 'comment_reply_rules_match_type_check') then
+    alter table public.comment_reply_rules drop constraint comment_reply_rules_match_type_check;
+  end if;
+  alter table public.comment_reply_rules
+    add constraint comment_reply_rules_match_type_check check (match_type in ('contains', 'exact', 'regex', 'fixed'));
+exception when duplicate_object then
+  null;
+end $$;
+
+create table if not exists public.comment_reply_outputs (
+  id uuid primary key default gen_random_uuid(),
+  rule_id uuid not null references public.comment_reply_rules(id) on delete cascade,
+  reply_cat_id uuid not null references public.cats(id) on delete cascade,
+  parent_target text not null default 'player_comment' check (parent_target in ('player_comment', 'previous_reply', 'root')),
+  body text not null check (char_length(body) between 1 and 280),
+  sort_order integer not null default 100,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.comment_likes (
+  player_id uuid not null references public.players(id) on delete cascade,
+  comment_id uuid not null references public.comments(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (player_id, comment_id)
+);
+
+create table if not exists public.player_comment_rule_triggers (
+  player_id uuid not null references public.players(id) on delete cascade,
+  rule_id uuid not null references public.comment_reply_rules(id) on delete cascade,
+  comment_id uuid references public.comments(id) on delete set null,
+  created_at timestamptz not null default now(),
+  primary key (player_id, rule_id)
 );
 
 create table if not exists public.player_quests (

@@ -151,25 +151,97 @@ public/resources/avatars/mimi.png
    - `type`：`dialogue`、`merge`、`paw_on_top`、`fishing`、`collect`、`social`
    - `game_key`：小游戏入口，例如 `fishing`、`merge_cats` 或 `paw_on_top`。它不属于某只猫，任何猫咪任务都可以调用。
    - `difficulty`：小游戏难度，数值越高越难。钓鱼会提升鱼移动速度和失败压力；合成会加快掉落节奏；猫爪在上会缩短猫爪等待和停留时间。
-   - `target_score`：合成小游戏的完成分数，钓鱼和猫爪在上任务可以设为 `0`。
+   - `target_score`：合成小游戏的完成分数
    - `unlock_key`：控制解锁条件
    - `reward_affection`：完成后增加的好感度
    - `reward_card_*`：感谢卡内容
    - 任务完成时还会按 `difficulty` 自动发放道具：猫粮 `2 + difficulty * 2`，猫条 `1 + difficulty`，玩具在难度 1 时给 `1`，难度 2 起为 `1 + floor(difficulty / 2)`。
 2. 在 `public.posts` 新增帖子，并把 `quest_id` 指向对应任务。
 3. 在 `public.posts.image_path` 写图片路径。单图写一个路径；多图直接写多个路径，用逗号、中文逗号或换行分隔；无图写 `null`。
+4. 在 `public.posts.created_at` 可手动写帖子日期，例如 `'2026-06-06'`；填 `default` 时使用数据库首次插入当天。
 
 ```sql
 -- 单图
-('帖子id', 'first-morning', ..., '图片说明', 'posts/mimi-post-1.jpg', ..., 1)
+('帖子id', 'first-morning', ..., '图片说明', 'posts/mimi-post-1.jpg', ..., 1, default)
 
 -- 多图
-('帖子id', 'farm-1', ..., '图片说明', 'posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg', ..., 16)
+('帖子id', 'farm-1', ..., '图片说明', 'posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg', ..., 16, '2026-06-06')
 ```
-4. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
-5. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
-6. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
-7. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
+5. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
+6. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
+7. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
+8. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
+
+## 如何维护评论自动回复
+
+评论区会随帖子默认展开。玩家提交评论时，前端调用 `create_post_comment` RPC，数据库会根据帖子配置和 `comment_reply_rules` 自动插入猫咪回复。
+
+帖子评论模式在 `public.posts` 里维护：
+
+- `comment_mode = 'free'`：玩家可以自由评论，按关键词触发自动回复。
+- `comment_mode = 'fixed'`：输入框显示 `fixed_comment_body`，玩家只能发送这句剧情评论。
+
+预设剧情评论在 `public.comments` 中维护：
+
+- `slug`：评论短标识，用于 `public.seed_comment_id('slug')` 引用父评论。
+- `parent_comment_id`：为空是一级评论；填父评论则显示为回复。
+- `source_type = 'preset'`：表示剧情预设评论。
+
+自动回复拆成两张表：
+
+- `cat_id`：哪只猫咪作者的帖子适用。
+- `post_id`：指定某一条帖子；填 `null` 表示这只猫咪的所有帖子都检测。
+- `match_type`：`contains`、`exact`、`regex` 或 `fixed`。
+- `keyword`：触发关键词，你可以随意修改。
+- `once_per_player`：是否每个玩家只触发一次。
+- `is_enabled`：是否启用该规则。
+- `comment_reply_outputs`：一条规则可以配置多条回复，每条用 `reply_cat_id` 指定回复猫咪。
+
+评论和自动回复都可以点赞。玩家第一次点赞某条评论会调用 `like_comment` RPC，并获得猫粮 `+1`。
+
+## Seed 行生成工具
+
+项目内置了一个轻量生成器，方便继续使用固定 UUID，同时用 slug 引用猫咪、任务和帖子。
+
+命令行生成副本复制粘贴：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 post
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 quest
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 cat
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 dialogue
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 reply-rule
+```
+
+生成器直接插入seed：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 post -Insert
+```
+
+生成器会读取 `supabase/seed.sql`，自动给对应类型生成下一个固定 UUID；`post`、`dialogue`、`reply-rule` 还会自动生成下一个 `sort_order`。不加 `-Insert` 时只打印 SQL 行；加 `-Insert` 时会直接写入 `seed.sql`。
+
+如果本机安装了 Node，也可以使用同等功能的 `node tools/seed-row.mjs post`。
+
+VSCode 中可以打开命令面板，运行 `Tasks: Run Task`，选择：
+
+- `Catsbook: 生成 post seed 行`
+- `Catsbook: 生成 quest seed 行`
+- `Catsbook: 生成 cat seed 行`
+- `Catsbook: 生成 dialogue seed 行`
+- `Catsbook: 生成自动回复 seed 行`
+
+这些 VSCode Task 默认会直接插入到 `supabase/seed.sql`。
+
+也可以在 SQL 文件里使用 snippet：
+
+- `cbpost`
+- `cbquest`
+- `cbcat`
+- `cbdialogue`
+- `cbreply`
+
+`seed.sql` 顶部提供了 `public.seed_cat_id('slug')`、`public.seed_quest_id('slug')`、`public.seed_post_id('slug')`，新增数据时可以用这些函数通过 slug 引用外键。
 
 ## 如何维护剧情
 
@@ -185,7 +257,12 @@ public/resources/avatars/mimi.png
 - 给帖子、猫咪、感谢卡增加 Supabase Storage 图片字段。
 - 给 `merge_cats` 增加更多像素猫头等级、障碍物或限时目标。
 - 增加背包表，限制每日投喂次数和道具消耗。
-- 增加评论列表读取和猫咪自动回复。
+- 每次测试新任务都需要删除数据库，研究一下更简便的自动化方法。
+- 咪咪占卜还没有做
+- 好感度ui考虑设计得更突出，在达到设定节点时设计自动弹窗弹出解锁的剧情
+- 感谢卡片的图鉴界面做预览图和分类
+- friend界面预览
+- 新增浏览过提示，方便引入新帖子提示
 
 ## test
 天降一只咩！

@@ -14,6 +14,9 @@ let activeFilter = "all";
 let sortDirection = "asc";
 let currentPosts = [];
 let hasPendingNewPosts = false;
+const expandedCommentPostIds = new Set();
+const collapsedCommentPostIds = new Set();
+let pendingCommentFocusPostId = null;
 
 setupLogout(api);
 setupFilterControls();
@@ -92,6 +95,7 @@ function renderFeedPosts() {
     }
   });
   if (hasPendingNewPosts && sortDirection === "asc") list.append(renderNewPostsNotice());
+  focusPendingCommentComposer();
 }
 
 function getFilteredPosts(posts) {
@@ -154,6 +158,7 @@ async function showNewPostsNoticeIfNeeded() {
 
 function renderPost(post) {
   const card = el("article", { class: "post-card" });
+  const commentsSection = renderComments(post);
   const actionRow = el("div", { class: "action-strip" });
   actionRow.append(
     el("button", {
@@ -167,8 +172,9 @@ function renderPost(post) {
     el("button", {
       class: "chip-btn",
       type: "button",
+      "aria-expanded": isCommentsExpanded(post) ? "true" : "false",
       text: "评论",
-      onclick: () => commentPost(post.id),
+      onclick: () => toggleCommentComposer(post.id),
     }),
   );
 
@@ -198,10 +204,236 @@ function renderPost(post) {
     post.quest ? renderQuestPreview({ ...post.quest, cat: post.cat }) : "",
     el("div", { class: "stat-row" }, [
       el("span", { text: post.liked ? "你已经给这条动态送出小鱼干赞" : "还没有点赞" }),
+      el("span", { text: `${getComments(post).length} 条评论` }),
     ]),
     actionRow,
+    commentsSection,
   );
   return card;
+}
+
+function renderComments(post) {
+  const comments = getComments(post);
+  if (!isCommentsExpanded(post)) return "";
+
+  const listNode = el("div", { class: "comment-list" });
+  if (comments.length) {
+    buildCommentTree(comments).forEach((comment) => appendCommentNode(listNode, comment));
+  } else {
+    listNode.append(el("p", { class: "comment-empty", text: "还没有评论，给猫咪留一句话吧。" }));
+  }
+
+  return el("section", { class: "comments-panel", "aria-label": "评论区", "data-post-id": post.id }, [
+    listNode,
+    renderCommentForm(post),
+  ]);
+}
+
+function appendCommentNode(listNode, comment) {
+  listNode.append(renderComment(comment));
+  (comment.children || []).forEach((child) => appendCommentNode(listNode, child));
+}
+
+function buildCommentTree(comments) {
+  const nodes = comments.map((comment) => ({ ...comment, children: [] }));
+  const byId = new Map(nodes.map((comment) => [comment.id, comment]));
+  const roots = [];
+  nodes.forEach((comment) => {
+    const parent = comment.parent_comment_id ? byId.get(comment.parent_comment_id) : null;
+    if (parent) parent.children.push(comment);
+    else roots.push(comment);
+  });
+  return roots;
+}
+
+function renderComment(comment) {
+  const isCat = comment.author_type === "cat";
+  const isOwnComment = comment.author_type === "player" && comment.player_id === playerId;
+  const avatar = {
+    name: comment.author_name,
+    avatar_emoji: comment.author_avatar_emoji || (isCat ? "猫" : "你"),
+    avatar_url: comment.author_avatar_url,
+  };
+  const classes = [
+    "comment-item",
+    isCat ? "cat-reply" : "",
+    isOwnComment ? "own-comment" : "",
+    comment.parent_comment_id ? "comment-reply" : "",
+  ].filter(Boolean).join(" ");
+  const likeButton = el("button", {
+    class: comment.liked ? "comment-like liked" : "comment-like",
+    type: "button",
+    title: comment.liked ? "已收到小鱼干赞" : "给这条评论点赞",
+    "aria-label": comment.liked ? "已点赞评论" : "点赞评论",
+    text: comment.liked ? "♥" : "♡",
+    onclick: (event) => likeComment(comment.id, event.currentTarget),
+  });
+  likeButton.textContent = comment.liked ? "♥" : "♡";
+  if (isOwnComment) {
+    likeButton.classList.add("is-disabled");
+    likeButton.disabled = true;
+    likeButton.title = "不能给自己的评论点赞";
+    likeButton.setAttribute("aria-label", "自己的评论不能点赞");
+  }
+
+  return el("article", { class: classes }, [
+    renderAvatar(avatar, "small"),
+    el("div", { class: "comment-bubble" }, [
+      el("div", { class: "comment-meta" }, [
+        el("strong", { text: comment.author_name || (isCat ? "猫咪" : "你") }),
+        el("span", { text: comment.author_handle || (isCat ? "猫咪回复" : "玩家评论") }),
+        el("time", { datetime: comment.created_at || "", text: formatCompactTime(comment.created_at) }),
+        likeButton,
+      ]),
+      el("p", { text: comment.body }),
+    ]),
+  ]);
+}
+
+function renderCommentForm(post) {
+  const isFixed = post.comment_mode === "fixed";
+  const fixedAlreadySent = isFixed && hasPlayerFixedComment(post);
+  const textarea = el("textarea", {
+    class: [
+      "comment-input",
+      isFixed ? "fixed-comment-input" : "",
+      fixedAlreadySent ? "sent-fixed-comment-input" : "",
+    ].filter(Boolean).join(" "),
+    name: "comment",
+    rows: "3",
+    maxlength: "280",
+    placeholder: isFixed ? "" : "想对猫猫说：",
+    "aria-label": "想对猫猫说：",
+    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : (isFixed ? "这条评论由剧情固定，无法更改" : "写下评论"),
+    readonly: isFixed ? "readonly" : null,
+  });
+  textarea.placeholder = isFixed ? "" : "想对猫猫说：";
+  textarea.setAttribute("aria-label", "想对猫猫说：");
+  if (isFixed) textarea.value = post.fixed_comment_body || "";
+  const submitButton = el("button", {
+    class: "primary-btn",
+    type: "submit",
+    text: fixedAlreadySent ? "已发送" : "发送",
+    disabled: fixedAlreadySent ? "disabled" : null,
+    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : "发送评论",
+  });
+  const form = el("form", { class: "comment-form" }, [
+    textarea,
+    submitButton,
+  ]);
+  submitButton.before(el("span", { class: "comment-limit", text: "最多 280 字" }));
+  form.addEventListener("submit", (event) => submitComment(event, post, textarea, submitButton));
+  return form;
+}
+
+function hasPlayerFixedComment(post) {
+  return getComments(post).some((comment) => (
+    comment.author_type === "player"
+    && comment.player_id === playerId
+    && comment.source_type === "player"
+  ));
+}
+
+async function submitComment(event, post, textarea, submitButton) {
+  event.preventDefault();
+  if (post.comment_mode === "fixed" && hasPlayerFixedComment(post)) {
+    setStatus(status, "这条剧情评论已经发送过啦。", "error");
+    return;
+  }
+  const body = post.comment_mode === "fixed" ? (post.fixed_comment_body || "").trim() : textarea.value.trim();
+  if (!body) {
+    setStatus(status, "评论不能为空，猫咪听不见空白的小纸条。", "error");
+    textarea.focus();
+    return;
+  }
+
+  submitButton.disabled = true;
+  setStatus(status, "正在把评论送到猫咪的小信箱...");
+  try {
+    const result = await api.addComment(playerId, post.id, body);
+    updatePostComments(post.id, result.comments);
+    setStatus(status, result.auto_reply_count ? "评论已送达，猫咪们也回复了你。" : "评论已送到猫咪的小信箱。");
+    renderFeedPosts();
+  } catch (error) {
+    setStatus(status, error.message, "error");
+  } finally {
+    submitButton.disabled = false;
+  }
+}
+
+function updatePostComments(postId, comments) {
+  currentPosts = currentPosts.map((post) => (post.id === postId ? { ...post, comments: comments || [] } : post));
+}
+
+function getComments(post) {
+  return Array.isArray(post.comments) ? post.comments : [];
+}
+
+function focusCommentComposer(commentsSection) {
+  const input = $(".comment-input", commentsSection);
+  input?.focus();
+}
+
+function isCommentsExpanded(post) {
+  if (expandedCommentPostIds.has(post.id)) return true;
+  if (collapsedCommentPostIds.has(post.id)) return false;
+  return getComments(post).length > 0;
+}
+
+function toggleCommentComposer(postId) {
+  const post = currentPosts.find((item) => item.id === postId);
+  if (!post) return;
+
+  if (isCommentsExpanded(post)) {
+    collapsedCommentPostIds.add(postId);
+    expandedCommentPostIds.delete(postId);
+    pendingCommentFocusPostId = null;
+  } else {
+    expandedCommentPostIds.add(postId);
+    collapsedCommentPostIds.delete(postId);
+    pendingCommentFocusPostId = postId;
+  }
+
+  renderFeedPosts();
+}
+
+function focusPendingCommentComposer() {
+  if (!pendingCommentFocusPostId) return;
+  const commentsSection = Array.from(list.querySelectorAll(".comments-panel"))
+    .find((section) => section.dataset.postId === pendingCommentFocusPostId);
+  pendingCommentFocusPostId = null;
+  focusCommentComposer(commentsSection);
+}
+
+async function likeComment(commentId, button) {
+  if (button?.disabled) return;
+  button.disabled = true;
+  try {
+    const result = await api.likeComment(playerId, commentId);
+    markCommentLiked(commentId);
+    if (button) {
+      button.classList.add("liked");
+      button.textContent = "♥";
+      button.disabled = false;
+      if (result?.reward_food) showCommentReward(button, "猫粮 +1");
+    }
+  } catch (error) {
+    if (button) button.disabled = false;
+    setStatus(status, error.message, "error");
+  }
+}
+
+function markCommentLiked(commentId) {
+  currentPosts = currentPosts.map((post) => ({
+    ...post,
+    comments: getComments(post).map((comment) => (comment.id === commentId ? { ...comment, liked: true } : comment)),
+  }));
+}
+
+function showCommentReward(button, text) {
+  const bubble = el("span", { class: "comment-reward-pop", text });
+  button.parentElement?.append(bubble);
+  window.setTimeout(() => bubble.remove(), 1200);
 }
 
 function renderBrokenPost(post, error) {
@@ -325,25 +557,37 @@ function renderPostImage(post) {
 
   return el("figure", { class: "post-image has-image post-gallery-wrap" }, [
     el("div", { class: getPostGalleryClass(images.length), "aria-label": `${images.length} 张帖子图片` }, (
-      images.map((image, index) => renderPostGalleryItem(image, imageLabel, index, images.length))
+      images.map((image, index) => renderPostGalleryItem(image, imageLabel, index, images))
     )),
     imageLabel ? el("figcaption", { text: imageLabel }) : "",
   ]);
 }
 
+function formatCompactTime(value) {
+  if (!value) return "刚刚";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "刚刚";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function renderPostImageButton(image, altText) {
   return el("button", {
-    class: "post-image-button",
-    type: "button",
-    "aria-label": "查看帖子图片大图",
-    title: "查看大图",
-    onclick: () => showPostImagePreview(image, altText),
+      class: "post-image-button",
+      type: "button",
+      "aria-label": "查看帖子图片大图",
+      title: "查看大图",
+      onclick: () => showPostImagePreview([image], 0, altText),
   }, [
     el("img", { src: image.image_url, alt: altText, loading: "lazy" }),
   ]);
 }
 
-function renderPostGalleryItem(image, imageLabel, index, total) {
+function renderPostGalleryItem(image, imageLabel, index, images) {
   const altText = imageLabel ? `${imageLabel} ${index + 1}` : `帖子图片 ${index + 1}`;
   return el("div", { class: "post-gallery-item" }, [
     el("button", {
@@ -351,21 +595,54 @@ function renderPostGalleryItem(image, imageLabel, index, total) {
       type: "button",
       "aria-label": `查看第 ${index + 1} 张帖子图片大图`,
       title: "查看大图",
-      onclick: () => showPostImagePreview(image, altText, index + 1, total),
+      onclick: () => showPostImagePreview(images, index, imageLabel || "帖子图片"),
     }, [
       el("img", { src: image.image_url, alt: altText, loading: "lazy" }),
     ]),
   ]);
 }
 
-function showPostImagePreview(image, altText, index = 1, total = 1) {
-  if (!image?.image_url) return;
-  const title = total > 1 ? `${altText}（${index}/${total}）` : altText;
+function showPostImagePreview(images, initialIndex = 0, baseLabel = "帖子图片") {
+  if (!Array.isArray(images) || !images.length) return;
+  let currentIndex = Math.min(Math.max(initialIndex, 0), images.length - 1);
   const dialog = el("dialog", { class: "avatar-preview-dialog post-image-preview-dialog" });
+  const previewImage = el("img", { src: "", alt: "" });
+  const titleNode = el("h2", { text: "" });
+  const previousButton = el("button", {
+    class: "post-preview-nav post-preview-prev",
+    type: "button",
+    "aria-label": "查看上一张图片",
+    title: "上一张",
+    onclick: () => showPreviewAt(currentIndex - 1),
+  }, [el("span", { text: "‹" })]);
+  const nextButton = el("button", {
+    class: "post-preview-nav post-preview-next",
+    type: "button",
+    "aria-label": "查看下一张图片",
+    title: "下一张",
+    onclick: () => showPreviewAt(currentIndex + 1),
+  }, [el("span", { text: "›" })]);
   const close = () => {
     dialog.close();
     dialog.remove();
   };
+
+  function getPreviewTitle() {
+    const total = images.length;
+    const label = baseLabel || images[currentIndex]?.image_label || "帖子图片";
+    return total > 1 ? `${label}（${currentIndex + 1}/${total}）` : label;
+  }
+
+  function showPreviewAt(index) {
+    currentIndex = Math.min(Math.max(index, 0), images.length - 1);
+    const image = images[currentIndex];
+    const title = getPreviewTitle();
+    previewImage.src = image.image_url;
+    previewImage.alt = title;
+    titleNode.textContent = title;
+    previousButton.hidden = currentIndex === 0;
+    nextButton.hidden = currentIndex === images.length - 1;
+  }
 
   dialog.append(
     el("div", { class: "dialog-body avatar-preview-body post-image-preview-body" }, [
@@ -377,8 +654,12 @@ function showPostImagePreview(image, altText, index = 1, total = 1) {
         text: "×",
         onclick: close,
       }),
-      el("img", { src: image.image_url, alt: title }),
-      el("h2", { text: title }),
+      el("div", { class: "post-preview-stage" }, [
+        previousButton,
+        previewImage,
+        nextButton,
+      ]),
+      titleNode,
     ]),
   );
 
@@ -387,6 +668,7 @@ function showPostImagePreview(image, altText, index = 1, total = 1) {
   });
 
   document.body.append(dialog);
+  showPreviewAt(currentIndex);
   dialog.showModal();
 }
 
@@ -413,25 +695,6 @@ async function likePost(postId) {
   } catch (error) {
     setStatus(status, error.message, "error");
   }
-}
-
-function commentPost(postId) {
-  showDialog("写一条友好评论", ["MVP 阶段先用弹窗模拟评论。"], [
-    {
-      label: "发送“摸摸头”",
-      className: "primary-btn",
-      onClick: async (close) => {
-        try {
-          await api.addComment(playerId, postId, "摸摸头，今天也辛苦了。");
-          close();
-          setStatus(status, "评论已送到猫咪的小信箱。");
-        } catch (error) {
-          setStatus(status, error.message, "error");
-        }
-      },
-    },
-    { label: "取消", className: "ghost-btn" },
-  ]);
 }
 
 async function handleQuest(quest) {

@@ -66,6 +66,8 @@ const demoSeed = {
       created_at: "2026-05-22T09:18:00+08:00",
       unlock_key: "liked_post:first-morning",
       quest_id: "quest-welcome-dialogue",
+      comment_mode: "free",
+      fixed_comment_body: null,
     },
     {
       id: "post-river-fishing",
@@ -78,6 +80,8 @@ const demoSeed = {
       created_at: "2026-05-22T20:30:00+08:00",
       unlock_key: "completed_welcome_dialogue",
       quest_id: "quest-shiny-fish",
+      comment_mode: "free",
+      fixed_comment_body: null,
     },
     {
       id: "post-merge-cats",
@@ -245,6 +249,64 @@ const demoSeed = {
     },
   ],
   likes: [],
+  commentLikes: [],
+  comments: [
+    {
+      id: "comment-mimi-first-1",
+      slug: "demo-mimi-first-sun",
+      post_id: "post-first-morning",
+      parent_comment_id: null,
+      player_id: null,
+      cat_id: "cat-mimi",
+      author_type: "cat",
+      source_type: "preset",
+      body: "评论区也晒到太阳了。",
+      sort_order: 1,
+      created_at: "2026-05-22T09:12:00+08:00",
+    },
+  ],
+  commentReplyRules: [
+    {
+      id: "reply-rule-mimi-fish",
+      cat_id: "cat-mimi",
+      post_id: null,
+      match_type: "contains",
+      keyword: "鱼",
+      once_per_player: false,
+      sort_order: 1,
+      is_enabled: true,
+      outputs: [
+        { reply_cat_id: "cat-mimi", parent_target: "player_comment", body: "你也想到鱼了吗？我先把爪垫搓热，等一个夜宵机会。", sort_order: 1 },
+      ],
+    },
+    {
+      id: "reply-rule-achi-river",
+      cat_id: "cat-achi",
+      post_id: null,
+      match_type: "contains",
+      keyword: "河",
+      once_per_player: false,
+      sort_order: 1,
+      is_enabled: true,
+      outputs: [
+        { reply_cat_id: "cat-achi", parent_target: "player_comment", body: "河边的风向变了，带上耐心再来找我。", sort_order: 1 },
+      ],
+    },
+    {
+      id: "reply-rule-nono-box",
+      cat_id: "cat-nono",
+      post_id: null,
+      match_type: "contains",
+      keyword: "纸箱",
+      once_per_player: false,
+      sort_order: 1,
+      is_enabled: true,
+      outputs: [
+        { reply_cat_id: "cat-nono", parent_target: "player_comment", body: "纸箱不是箱子，是通往下一层谜题的门。", sort_order: 1 },
+      ],
+    },
+  ],
+  commentRuleTriggers: [],
   questStates: {},
   friendships: {},
   inventory: { food: 0, treat: 0, toy: 0 },
@@ -571,6 +633,9 @@ export async function listFeedPosts(playerId) {
         cat: getCat(state, post.cat_id),
         quest: getPostQuest(state, post.quest_id),
         liked: state.likes.includes(post.id),
+        comments: getPostComments(state, post.id),
+        comment_mode: post.comment_mode || "free",
+        fixed_comment_body: post.fixed_comment_body || "",
       }));
   }
 
@@ -581,6 +646,46 @@ export async function listFeedPosts(playerId) {
     ...withPostImages(post),
     cat: withCatResource(post.cat),
     quest: normalizeFeedQuest(post.quest),
+    comments: normalizeComments(post.comments),
+    comment_mode: post.comment_mode || "free",
+    fixed_comment_body: post.fixed_comment_body || "",
+  }));
+}
+
+function getPostComments(state, postId) {
+  return (state.comments || [])
+    .filter((comment) => comment.post_id === postId)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0) || new Date(a.created_at || 0) - new Date(b.created_at || 0))
+    .map((comment) => normalizeDemoComment(state, comment));
+}
+
+function normalizeDemoComment(state, comment) {
+  const cat = comment.cat_id ? getCat(state, comment.cat_id) : null;
+  return {
+    ...comment,
+    author_name: cat?.name || state.player?.display_name || "猫书玩家",
+    author_handle: cat?.handle || "玩家评论",
+    author_avatar_emoji: cat?.avatar_emoji || "你",
+    author_avatar_url: cat?.avatar_url || "",
+    parent_comment_id: comment.parent_comment_id || null,
+    source_type: comment.source_type || "player",
+    sort_order: comment.sort_order || 100,
+    liked: (state.commentLikes || []).includes(comment.id),
+  };
+}
+
+function normalizeComments(comments) {
+  if (!Array.isArray(comments)) return [];
+  return comments.map((comment) => ({
+    ...comment,
+    author_name: comment.author_name || "猫书玩家",
+    author_handle: comment.author_handle || "玩家评论",
+    author_avatar_emoji: comment.author_avatar_emoji || (comment.author_type === "cat" ? "猫" : "你"),
+    author_avatar_url: getResourceUrl(comment.author_avatar_path || comment.author_avatar_url),
+    parent_comment_id: comment.parent_comment_id || null,
+    source_type: comment.source_type || "player",
+    sort_order: comment.sort_order || 100,
+    liked: Boolean(comment.liked),
   }));
 }
 
@@ -627,11 +732,143 @@ export async function likePost(playerId, postId) {
 }
 
 export async function addComment(playerId, postId, body) {
-  if (shouldUseDemo()) return { id: crypto.randomUUID(), body };
+  if (shouldUseDemo()) {
+    const state = readDemo();
+    const now = new Date().toISOString();
+    const post = state.posts.find((item) => item.id === postId);
+    if (post?.comment_mode === "fixed" && (state.comments || []).some((comment) => (
+      comment.post_id === postId
+      && comment.player_id === playerId
+      && comment.author_type === "player"
+      && comment.source_type === "player"
+    ))) {
+      throw new Error("这条剧情评论已经发送过啦。");
+    }
+    const finalBody = post?.comment_mode === "fixed" ? post.fixed_comment_body : body;
+    const playerComment = {
+      id: crypto.randomUUID(),
+      player_id: playerId,
+      post_id: postId,
+      parent_comment_id: null,
+      cat_id: null,
+      author_type: "player",
+      source_type: "player",
+      body: finalBody,
+      sort_order: 1000,
+      created_at: now,
+    };
+    state.comments = state.comments || [];
+    state.comments.push(playerComment);
+
+    const replies = createDemoAutoReplies(state, post, finalBody, playerComment);
+    replies.forEach((reply) => state.comments.push(reply));
+
+    writeDemo(state);
+    return {
+      comment: normalizeDemoComment(state, playerComment),
+      auto_reply_count: replies.length,
+      comments: getPostComments(state, postId),
+    };
+  }
   await ensureSupabase();
-  const { data, error } = await supabase.from("comments").insert({ player_id: playerId, post_id: postId, body }).select("id, body").single();
+  const { data, error } = await supabase.rpc("create_post_comment", {
+    p_player_id: playerId,
+    p_post_id: postId,
+    p_body: body,
+  });
+  if (error) throw new Error(normalizeError(error));
+  return {
+    ...data,
+    comments: normalizeComments(data?.comments),
+  };
+}
+
+export async function likeComment(playerId, commentId) {
+  if (shouldUseDemo()) {
+    const state = readDemo();
+    const comment = (state.comments || []).find((item) => item.id === commentId);
+    if (comment?.author_type === "player" && comment.player_id === playerId) {
+      throw new Error("不能给自己的评论点赞。");
+    }
+    state.commentLikes = state.commentLikes || [];
+    const isNewLike = !state.commentLikes.includes(commentId);
+    if (isNewLike) {
+      state.commentLikes.push(commentId);
+      state.inventory = state.inventory || { food: 0, treat: 0, toy: 0 };
+      state.inventory.food = (state.inventory.food || 0) + 1;
+    }
+    writeDemo(state);
+    return { liked: true, reward_food: isNewLike ? 1 : 0 };
+  }
+
+  await ensureSupabase();
+  const { data, error } = await supabase.rpc("like_comment", { p_player_id: playerId, p_comment_id: commentId });
   if (error) throw new Error(normalizeError(error));
   return data;
+}
+
+function createDemoAutoReplies(state, post, body, playerComment) {
+  if (!post) return [];
+  const rule = (state.commentReplyRules || [])
+    .filter((item) => item.is_enabled !== false)
+    .filter((item) => !item.cat_id || item.cat_id === post.cat_id)
+    .filter((item) => !item.post_id || item.post_id === post.id)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .find((item) => (
+      (post.comment_mode === "fixed" && item.match_type === "fixed")
+      || (item.match_type !== "fixed" && matchesCommentRule(item, body))
+    ) && canTriggerDemoRule(state, item));
+
+  if (!rule) return [];
+  if (rule.once_per_player) {
+    state.commentRuleTriggers = state.commentRuleTriggers || [];
+    state.commentRuleTriggers.push({ rule_id: rule.id, player_id: state.player?.id });
+  }
+
+  let previousReplyId = null;
+  return (rule.outputs || [])
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    .map((output) => {
+      const id = crypto.randomUUID();
+      const parentId = output.parent_target === "root"
+        ? null
+        : output.parent_target === "previous_reply"
+          ? previousReplyId || playerComment.id
+          : playerComment.id;
+      previousReplyId = id;
+      return {
+        id,
+        player_id: null,
+        post_id: post.id,
+        parent_comment_id: parentId,
+        cat_id: output.reply_cat_id || post.cat_id,
+        author_type: "cat",
+        source_type: "auto_reply",
+        body: output.body,
+        sort_order: 1000 + (output.sort_order || 1),
+        created_at: new Date(Date.now() + 350 + (output.sort_order || 1) * 100).toISOString(),
+      };
+    });
+}
+
+function canTriggerDemoRule(state, rule) {
+  if (!rule.once_per_player) return true;
+  return !(state.commentRuleTriggers || []).some((item) => item.rule_id === rule.id && item.player_id === state.player?.id);
+}
+
+function matchesCommentRule(rule, body) {
+  const keyword = String(rule.keyword || "").trim();
+  const content = String(body || "").trim();
+  if (!keyword || !content) return false;
+  if (rule.match_type === "exact") return content === keyword;
+  if (rule.match_type === "regex") {
+    try {
+      return new RegExp(keyword, "i").test(content);
+    } catch {
+      return false;
+    }
+  }
+  return content.includes(keyword);
 }
 
 export async function listQuests(playerId) {
