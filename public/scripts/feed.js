@@ -13,14 +13,15 @@ const HUMAN_AUTHOR_NAMES = new Set(["二狗", "咩咩"]);
 let activeFilter = "all";
 let sortDirection = "asc";
 let currentPosts = [];
-let hasPendingNewPosts = false;
-const expandedCommentPostIds = new Set();
-const collapsedCommentPostIds = new Set();
+const expandedCommentComposerPostIds = new Set();
 let pendingCommentFocusPostId = null;
+let pendingNewPostScroll = null;
+let activeReplyTarget = null;
 
 setupLogout(api);
 setupFilterControls();
 setupSortControls();
+setupPageJumpControls();
 loadFeed();
 
 async function loadFeed() {
@@ -29,7 +30,6 @@ async function loadFeed() {
     const posts = await api.listFeedPosts(playerId);
     if (!Array.isArray(posts)) throw new Error("帖子数据格式异常，请检查 get_feed_posts RPC 返回值。");
     currentPosts = posts;
-    hasPendingNewPosts = false;
     setStatus(status, "");
     if (!posts.length) {
       renderState(list, "时间线还是空的", "先完成一个任务，猫咪们就会慢慢出现。");
@@ -44,6 +44,25 @@ async function loadFeed() {
 function setupSortControls() {
   sortAscButton?.addEventListener("click", () => setSortDirection("asc"));
   sortDescButton?.addEventListener("click", () => setSortDirection("desc"));
+}
+
+function setupPageJumpControls() {
+  document.body.append(el("nav", { class: "page-jump-controls", "aria-label": "页面跳转" }, [
+    el("button", {
+      type: "button",
+      "aria-label": "回到页面顶端",
+      title: "回到顶端",
+      class: "page-paw-button",
+      onclick: () => window.scrollTo({ top: 0, behavior: "smooth" }),
+    }, [el("span", { class: "page-arrow", text: "↑" })]),
+    el("button", {
+      type: "button",
+      "aria-label": "跳到页面底端",
+      title: "跳到底端",
+      class: "page-paw-button",
+      onclick: () => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" }),
+    }, [el("span", { class: "page-arrow", text: "↓" })]),
+  ]));
 }
 
 function setupFilterControls() {
@@ -81,12 +100,20 @@ function renderFeedPosts() {
     return;
   }
   const posts = getSortedPosts(getFilteredPosts(currentPosts));
+  const visiblePosts = posts.filter((post) => !post.is_new);
+  const newPosts = posts.filter((post) => post.is_new);
   if (!posts.length) {
     renderState(list, "这个分类暂时没有帖子", getEmptyFilterMessage());
     return;
   }
-  if (hasPendingNewPosts && sortDirection === "desc") list.append(renderNewPostsNotice());
-  posts.forEach((post) => {
+
+  if (newPosts.length) list.append(renderNewPostsNotice(newPosts.length));
+  if (!visiblePosts.length && newPosts.length) {
+    focusPendingCommentComposer();
+    return;
+  }
+
+  visiblePosts.forEach((post) => {
     try {
       list.append(renderPost(post));
     } catch (error) {
@@ -94,8 +121,8 @@ function renderFeedPosts() {
       list.append(renderBrokenPost(post, error));
     }
   });
-  if (hasPendingNewPosts && sortDirection === "asc") list.append(renderNewPostsNotice());
   focusPendingCommentComposer();
+  scrollToPendingNewPosts();
 }
 
 function getFilteredPosts(posts) {
@@ -130,34 +157,53 @@ function getPostTimestamp(post) {
   return Number.isNaN(time) ? 0 : time;
 }
 
-function renderNewPostsNotice() {
+function renderNewPostsNotice(count = 0) {
   return el("button", {
     class: "new-posts-notice",
     type: "button",
-    text: "有新的猫咪帖子，点击刷新",
-    onclick: () => loadFeed(),
+    text: count > 1 ? `有 ${count} 条新帖子，点击查看` : "有 1 条新帖子，点击查看",
+    onclick: () => revealNewPosts(),
   });
 }
 
 async function showNewPostsNoticeIfNeeded() {
-  const visibleIds = new Set(currentPosts.map((post) => post.id));
   const posts = await api.listFeedPosts(playerId);
-  const visiblePosts = posts.filter((post) => visibleIds.has(post.id));
-  const newPosts = posts.filter((post) => !visibleIds.has(post.id));
+  const newPosts = posts.filter((post) => post.is_new);
 
-  currentPosts = visiblePosts;
-  hasPendingNewPosts = newPosts.length > 0;
+  currentPosts = posts;
   renderFeedPosts();
 
-  if (hasPendingNewPosts) {
-    setStatus(status, "猫咪刚刚发了新动态，点提示或刷新网页就能看到。");
+  if (newPosts.length) {
+    setStatus(status, "猫咪刚刚发了新动态，点新帖子提示就能看到。");
   } else {
     setStatus(status, "");
   }
 }
 
+async function revealNewPosts() {
+  const newIds = currentPosts.filter((post) => post.is_new).map((post) => post.id);
+  if (!newIds.length) return;
+
+  setStatus(status, "正在拆开新的猫书动态...");
+  try {
+    if (typeof api.markFeedPostsSeen === "function") {
+      await api.markFeedPostsSeen(playerId, newIds);
+    } else {
+      console.warn("api.markFeedPostsSeen is missing; revealing posts for this page only.");
+    }
+    pendingNewPostScroll = { ids: new Set(newIds), direction: sortDirection };
+    currentPosts = currentPosts.map((post) => (newIds.includes(post.id) ? { ...post, is_new: false } : post));
+    setStatus(status, "");
+    renderFeedPosts();
+  } catch (error) {
+    setStatus(status, error.message, "error");
+  }
+}
+
 function renderPost(post) {
   const card = el("article", { class: "post-card" });
+  card.dataset.postId = post.id;
+  if (pendingNewPostScroll?.ids?.has(post.id)) card.dataset.newlyRevealed = "true";
   const commentsSection = renderComments(post);
   const actionRow = el("div", { class: "action-strip" });
   actionRow.append(
@@ -165,14 +211,14 @@ function renderPost(post) {
       class: post.liked ? "heart-btn liked" : "heart-btn",
       type: "button",
       "aria-label": post.liked ? "已点赞" : "点赞",
-      title: post.liked ? "已点赞" : "点赞",
+      title: post.liked ? "你已经给这条动态送出小鱼干赞" : "点赞",
       text: post.liked ? "♥" : "♡",
       onclick: () => likePost(post.id),
     }),
     el("button", {
       class: "chip-btn",
       type: "button",
-      "aria-expanded": isCommentsExpanded(post) ? "true" : "false",
+      "aria-expanded": isCommentComposerExpanded(post.id) ? "true" : "false",
       text: "评论",
       onclick: () => toggleCommentComposer(post.id),
     }),
@@ -203,7 +249,6 @@ function renderPost(post) {
     renderPostImage(post),
     post.quest ? renderQuestPreview({ ...post.quest, cat: post.cat }) : "",
     el("div", { class: "stat-row" }, [
-      el("span", { text: post.liked ? "你已经给这条动态送出小鱼干赞" : "还没有点赞" }),
       el("span", { text: `${getComments(post).length} 条评论` }),
     ]),
     actionRow,
@@ -214,24 +259,25 @@ function renderPost(post) {
 
 function renderComments(post) {
   const comments = getComments(post);
-  if (!isCommentsExpanded(post)) return "";
-
   const listNode = el("div", { class: "comment-list" });
   if (comments.length) {
-    buildCommentTree(comments).forEach((comment) => appendCommentNode(listNode, comment));
+    buildCommentTree(comments).forEach((comment) => appendCommentNode(listNode, comment, post));
   } else {
-    listNode.append(el("p", { class: "comment-empty", text: "还没有评论，给猫咪留一句话吧。" }));
+    listNode.append(el("p", { class: "comment-empty", text: "还没有评论，给猫猫留言吧w" }));
   }
 
   return el("section", { class: "comments-panel", "aria-label": "评论区", "data-post-id": post.id }, [
     listNode,
-    renderCommentForm(post),
+    isCommentComposerExpanded(post.id) ? renderCommentForm(post) : "",
   ]);
 }
 
-function appendCommentNode(listNode, comment) {
-  listNode.append(renderComment(comment));
-  (comment.children || []).forEach((child) => appendCommentNode(listNode, child));
+function appendCommentNode(listNode, comment, post, depth = 0) {
+  listNode.append(renderComment(comment, post, depth));
+  if (activeReplyTarget?.postId === post.id && activeReplyTarget.commentId === comment.id) {
+    listNode.append(renderCommentForm(post, { parentComment: comment }));
+  }
+  (comment.children || []).forEach((child) => appendCommentNode(listNode, child, post, depth + 1));
 }
 
 function buildCommentTree(comments) {
@@ -246,9 +292,10 @@ function buildCommentTree(comments) {
   return roots;
 }
 
-function renderComment(comment) {
-  const isCat = comment.author_type === "cat";
-  const isOwnComment = comment.author_type === "player" && comment.player_id === playerId;
+function renderComment(comment, post, depth = 0) {
+  const isCat = Boolean(comment.cat_id);
+  const isOwnComment = comment.player_id === playerId;
+  const canReply = !comment.cat_id;
   const avatar = {
     name: comment.author_name,
     avatar_emoji: comment.author_avatar_emoji || (isCat ? "猫" : "你"),
@@ -275,24 +322,47 @@ function renderComment(comment) {
     likeButton.title = "不能给自己的评论点赞";
     likeButton.setAttribute("aria-label", "自己的评论不能点赞");
   }
+  const actionButtons = [];
+  if (canReply) {
+    actionButtons.push(el("button", {
+      class: "comment-action",
+      type: "button",
+      text: activeReplyTarget?.commentId === comment.id ? "取消回复" : "回复",
+      onclick: () => toggleReplyComposer(post.id, comment.id),
+    }));
+  }
+  if (isOwnComment) {
+    actionButtons.push(el("button", {
+      class: "comment-action danger",
+      type: "button",
+      text: "删除",
+      onclick: () => deleteComment(post.id, comment.id),
+    }));
+  }
 
-  return el("article", { class: classes }, [
+  return el("article", { class: classes, style: `--comment-depth: ${Math.min(depth, 3)}` }, [
     renderAvatar(avatar, "small"),
     el("div", { class: "comment-bubble" }, [
-      el("div", { class: "comment-meta" }, [
-        el("strong", { text: comment.author_name || (isCat ? "猫咪" : "你") }),
-        el("span", { text: comment.author_handle || (isCat ? "猫咪回复" : "玩家评论") }),
-        el("time", { datetime: comment.created_at || "", text: formatCompactTime(comment.created_at) }),
-        likeButton,
+      el("div", { class: "comment-content" }, [
+        el("div", { class: "comment-meta" }, [
+          el("strong", { text: comment.author_name || (isCat ? "猫咪" : "你") }),
+          el("span", { text: comment.author_handle || (isCat ? "猫咪回复" : "玩家评论") }),
+          el("time", { datetime: comment.created_at || "", text: formatCompactTime(comment.created_at) }),
+        ]),
+        el("p", { text: comment.body }),
       ]),
-      el("p", { text: comment.body }),
+      el("div", { class: "comment-side" }, [
+        likeButton,
+        actionButtons.length ? el("div", { class: "comment-actions" }, actionButtons) : "",
+      ]),
     ]),
   ]);
 }
 
-function renderCommentForm(post) {
+function renderCommentForm(post, options = {}) {
+  const parentComment = options.parentComment || null;
   const isFixed = post.comment_mode === "fixed";
-  const fixedAlreadySent = isFixed && hasPlayerFixedComment(post);
+  const fixedAlreadySent = !parentComment && isFixed && hasPlayerFixedComment(post);
   const textarea = el("textarea", {
     class: [
       "comment-input",
@@ -302,45 +372,44 @@ function renderCommentForm(post) {
     name: "comment",
     rows: "3",
     maxlength: "280",
-    placeholder: isFixed ? "" : "想对猫猫说：",
-    "aria-label": "想对猫猫说：",
-    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : (isFixed ? "这条评论由剧情固定，无法更改" : "写下评论"),
-    readonly: isFixed ? "readonly" : null,
+    placeholder: parentComment ? `回复 ${parentComment.author_name || "玩家"}：` : (isFixed ? "" : "想对猫猫说："),
+    "aria-label": parentComment ? "写下回复" : "想对猫猫说：",
+    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : (!parentComment && isFixed ? "这条评论由剧情固定，无法更改" : "写下评论"),
+    readonly: !parentComment && isFixed ? "readonly" : null,
   });
-  textarea.placeholder = isFixed ? "" : "想对猫猫说：";
-  textarea.setAttribute("aria-label", "想对猫猫说：");
-  if (isFixed) textarea.value = post.fixed_comment_body || "";
+  textarea.placeholder = parentComment ? `回复 ${parentComment.author_name || "玩家"}：` : (isFixed ? "" : "想对猫猫说：");
+  textarea.setAttribute("aria-label", parentComment ? "写下回复" : "想对猫猫说：");
+  if (!parentComment && isFixed) textarea.value = post.fixed_comment_body || "";
   const submitButton = el("button", {
     class: "primary-btn",
     type: "submit",
     text: fixedAlreadySent ? "已发送" : "发送",
     disabled: fixedAlreadySent ? "disabled" : null,
-    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : "发送评论",
+    title: fixedAlreadySent ? "剧情固定评论只能发送一次" : (parentComment ? "发送回复" : "发送评论"),
   });
   const form = el("form", { class: "comment-form" }, [
     textarea,
     submitButton,
   ]);
   submitButton.before(el("span", { class: "comment-limit", text: "最多 280 字" }));
-  form.addEventListener("submit", (event) => submitComment(event, post, textarea, submitButton));
+  form.addEventListener("submit", (event) => submitComment(event, post, textarea, submitButton, parentComment));
   return form;
 }
 
 function hasPlayerFixedComment(post) {
   return getComments(post).some((comment) => (
-    comment.author_type === "player"
-    && comment.player_id === playerId
-    && comment.source_type === "player"
+    comment.player_id === playerId
+    && !comment.parent_comment_id
   ));
 }
 
-async function submitComment(event, post, textarea, submitButton) {
+async function submitComment(event, post, textarea, submitButton, parentComment = null) {
   event.preventDefault();
-  if (post.comment_mode === "fixed" && hasPlayerFixedComment(post)) {
+  if (!parentComment && post.comment_mode === "fixed" && hasPlayerFixedComment(post)) {
     setStatus(status, "这条剧情评论已经发送过啦。", "error");
     return;
   }
-  const body = post.comment_mode === "fixed" ? (post.fixed_comment_body || "").trim() : textarea.value.trim();
+  const body = !parentComment && post.comment_mode === "fixed" ? (post.fixed_comment_body || "").trim() : textarea.value.trim();
   if (!body) {
     setStatus(status, "评论不能为空，猫咪听不见空白的小纸条。", "error");
     textarea.focus();
@@ -348,11 +417,12 @@ async function submitComment(event, post, textarea, submitButton) {
   }
 
   submitButton.disabled = true;
-  setStatus(status, "正在把评论送到猫咪的小信箱...");
+  setStatus(status, parentComment ? "正在送出回复..." : "正在把评论送到猫咪的小信箱...");
   try {
-    const result = await api.addComment(playerId, post.id, body);
+    const result = await api.addComment(playerId, post.id, body, parentComment?.id || null);
+    activeReplyTarget = null;
     updatePostComments(post.id, result.comments);
-    setStatus(status, result.auto_reply_count ? "评论已送达，猫咪们也回复了你。" : "评论已送到猫咪的小信箱。");
+    setStatus(status, parentComment ? "回复已送达。" : (result.auto_reply_count ? "评论已送达，猫咪们也回复了你。" : "评论已送到猫咪的小信箱。"));
     renderFeedPosts();
   } catch (error) {
     setStatus(status, error.message, "error");
@@ -374,26 +444,29 @@ function focusCommentComposer(commentsSection) {
   input?.focus();
 }
 
-function isCommentsExpanded(post) {
-  if (expandedCommentPostIds.has(post.id)) return true;
-  if (collapsedCommentPostIds.has(post.id)) return false;
-  return getComments(post).length > 0;
+function isCommentComposerExpanded(postId) {
+  return expandedCommentComposerPostIds.has(postId);
 }
 
 function toggleCommentComposer(postId) {
-  const post = currentPosts.find((item) => item.id === postId);
-  if (!post) return;
-
-  if (isCommentsExpanded(post)) {
-    collapsedCommentPostIds.add(postId);
-    expandedCommentPostIds.delete(postId);
+  if (expandedCommentComposerPostIds.has(postId)) {
+    expandedCommentComposerPostIds.delete(postId);
     pendingCommentFocusPostId = null;
   } else {
-    expandedCommentPostIds.add(postId);
-    collapsedCommentPostIds.delete(postId);
+    expandedCommentComposerPostIds.add(postId);
     pendingCommentFocusPostId = postId;
   }
 
+  renderFeedPosts();
+}
+
+function toggleReplyComposer(postId, commentId) {
+  if (activeReplyTarget?.postId === postId && activeReplyTarget.commentId === commentId) {
+    activeReplyTarget = null;
+  } else {
+    activeReplyTarget = { postId, commentId };
+    expandedCommentComposerPostIds.delete(postId);
+  }
   renderFeedPosts();
 }
 
@@ -403,6 +476,33 @@ function focusPendingCommentComposer() {
     .find((section) => section.dataset.postId === pendingCommentFocusPostId);
   pendingCommentFocusPostId = null;
   focusCommentComposer(commentsSection);
+}
+
+function scrollToPendingNewPosts() {
+  if (!pendingNewPostScroll) return;
+  const target = pendingNewPostScroll.direction === "desc"
+    ? $(".post-card[data-newly-revealed='true']", list)
+    : Array.from(list.querySelectorAll(".post-card[data-newly-revealed='true']")).at(-1);
+
+  pendingNewPostScroll = null;
+  target?.scrollIntoView({
+    behavior: "smooth",
+    block: sortDirection === "desc" ? "start" : "end",
+  });
+}
+
+async function deleteComment(postId, commentId) {
+  if (!window.confirm("确定要删除这条评论吗？它下面的回复也会一起删除。")) return;
+  setStatus(status, "正在删除评论...");
+  try {
+    const result = await api.deleteComment(playerId, commentId);
+    activeReplyTarget = null;
+    updatePostComments(result.post_id || postId, result.comments);
+    setStatus(status, "评论已删除。");
+    renderFeedPosts();
+  } catch (error) {
+    setStatus(status, error.message, "error");
+  }
 }
 
 async function likeComment(commentId, button) {
@@ -445,14 +545,26 @@ function renderBrokenPost(post, error) {
 }
 
 function renderQuestPreview(quest) {
+  if (quest.status !== "completed") {
+    return el("button", {
+      class: "quest-preview quest-preview-unread",
+      type: "button",
+      onclick: () => handleQuest(quest),
+    }, [
+      el("span", { class: "quest-preview-mark", "aria-hidden": "true", text: "✉" }),
+      el("span", { class: "quest-preview-unread-text", text: "你有一个新的猫咪委托" }),
+    ]);
+  }
+
   return el("section", { class: "quest-preview" }, [
-    el("div", {}, [
-      el("span", { class: "quest-preview-label", text: "猫咪委托" }),
+    el("div", { class: "quest-preview-mark", "aria-hidden": "true", text: "✉" }),
+    el("div", { class: "quest-preview-main" }, [
+      el("div", { class: "quest-preview-meta" }, [
+        el("span", { class: "quest-preview-label", text: `猫咪委托 · ${getQuestTypeLabel(quest)}` }),
+      ]),
       el("h4", { text: quest.title || "猫咪委托" }),
-      el("p", { text: quest.description || "这只猫咪发来了一条小小委托。" }),
     ]),
     el("div", { class: "quest-preview-actions" }, [
-      el("span", { class: "badge", text: getQuestTypeLabel(quest) }),
       el("button", {
         class: quest.status === "completed" ? "ghost-btn" : "primary-btn",
         type: "button",
@@ -465,7 +577,7 @@ function renderQuestPreview(quest) {
 
 function getQuestTypeLabel(quest) {
   if (isGame(quest, "fishing")) return "钓鱼";
-  if (isGame(quest, "merge_cats")) return "合成";
+  if (isGame(quest, "merge")) return "合成";
   if (isGame(quest, "paw_on_top")) return "猫爪";
   if (quest.type === "dialogue") return "对话";
   return quest.type || "任务";
@@ -537,7 +649,7 @@ function getQuestButtonLabel(quest) {
   if (quest.status === "completed") return "已完成";
   if (quest.status === "active") return "继续任务";
   if (isGame(quest, "fishing")) return "接受钓鱼";
-  if (isGame(quest, "merge_cats")) return "接受合成";
+  if (isGame(quest, "merge")) return "接受合成";
   if (isGame(quest, "paw_on_top")) return "接受猫爪挑战";
   if (quest.type === "dialogue") return "接受任务";
   return "查看任务";
@@ -703,44 +815,65 @@ async function handleQuest(quest) {
     return;
   }
 
+  showQuestDetail(quest);
+}
+
+function showQuestDetail(quest) {
+  showQuestLetterDialog(quest.title, [
+    quest.description || "猫咪发来了一条小小委托。",
+    getQuestRequirementText(quest),
+    quest.reward_card_title ? `完成后可获得：${quest.reward_card_title}` : "完成后会解锁猫咪感谢卡。",
+  ], getQuestDialogActions(quest));
+}
+
+function getQuestDialogActions(quest) {
   if (isGame(quest, "fishing")) {
-    try {
-      await api.startQuest(playerId, quest.id);
-      api.setPendingFishingQuest(quest);
-      window.location.href = "./fishing.html";
-    } catch (error) {
-      setStatus(status, error.message, "error");
-    }
-    return;
+    return [
+      {
+        label: quest.status === "active" ? "继续钓鱼" : "接受钓鱼",
+        className: "primary-btn",
+        onClick: async () => {
+          await api.startQuest(playerId, quest.id);
+          api.setPendingFishingQuest(quest);
+          window.location.href = "./fishing.html";
+        },
+      },
+      { label: "稍后", className: "ghost-btn" },
+    ];
   }
 
-  if (isGame(quest, "merge_cats")) {
-    try {
-      await api.startQuest(playerId, quest.id);
-      api.setPendingMergeQuest(quest);
-      window.location.href = "./merge.html";
-    } catch (error) {
-      setStatus(status, error.message, "error");
-    }
-    return;
+  if (isGame(quest, "merge")) {
+    return [
+      {
+        label: quest.status === "active" ? "继续合成" : "接受合成",
+        className: "primary-btn",
+        onClick: async () => {
+          await api.startQuest(playerId, quest.id);
+          api.setPendingMergeQuest(quest);
+          window.location.href = "./merge.html";
+        },
+      },
+      { label: "稍后", className: "ghost-btn" },
+    ];
   }
 
   if (isGame(quest, "paw_on_top")) {
-    try {
-      await api.startQuest(playerId, quest.id);
-      api.setPendingPawQuest(quest);
-      window.location.href = "./paw-on-top.html";
-    } catch (error) {
-      setStatus(status, error.message, "error");
-    }
-    return;
+    return [
+      {
+        label: quest.status === "active" ? "继续猫爪挑战" : "接受猫爪挑战",
+        className: "primary-btn",
+        onClick: async () => {
+          await api.startQuest(playerId, quest.id);
+          api.setPendingPawQuest(quest);
+          window.location.href = "./paw-on-top.html";
+        },
+      },
+      { label: "稍后", className: "ghost-btn" },
+    ];
   }
 
   if (quest.type === "dialogue") {
-    showDialog(quest.title, [
-      quest.description || "猫咪发来了一条小小委托。",
-      quest.reward_card_title ? `完成后可获得：${quest.reward_card_title}` : "完成后会解锁猫咪感谢卡。",
-    ], [
+    return [
       {
         label: "完成对话",
         className: "primary-btn",
@@ -757,18 +890,71 @@ async function handleQuest(quest) {
         },
       },
       { label: "稍后", className: "ghost-btn" },
-    ]);
-    return;
+    ];
   }
 
-  window.location.href = "./quests.html";
+  return [
+    {
+      label: "查看任务",
+      className: "primary-btn",
+      onClick: () => {
+        window.location.href = "./quests.html";
+      },
+    },
+    { label: "稍后", className: "ghost-btn" },
+  ];
+}
+
+function showQuestLetterDialog(title, lines = [], actions = [], meta = {}) {
+  const dialog = el("dialog", { class: "quest-letter-dialog" });
+  const heading = el("div", { class: "quest-letter-heading" }, [
+    el("h2", { text: title }),
+    meta.status ? el("span", { class: "quest-letter-status", text: meta.status }) : "",
+  ]);
+  const body = el("div", { class: "dialog-body quest-letter-body" }, [
+    heading,
+    el("div", { class: "quest-letter-lines" }, lines.map((line) => (
+      el("p", { class: isQuestRequirementLine(line) ? "quest-letter-requirement" : "", text: line })
+    ))),
+    el("div", { class: "button-row" }),
+  ]);
+  const actionRow = $(".button-row", body);
+  const close = () => {
+    dialog.close();
+    dialog.remove();
+  };
+  const normalizedActions = actions.length ? actions : [{ label: "知道了", onClick: close, className: "primary-btn" }];
+  normalizedActions.forEach((action) => {
+    actionRow.append(
+      el("button", {
+        class: action.className || "primary-btn",
+        type: "button",
+        text: action.label,
+        onclick: async () => {
+          try {
+            if (action.onClick) await action.onClick(close);
+            else close();
+          } catch (error) {
+            setStatus(status, error.message, "error");
+          }
+        },
+      }),
+    );
+  });
+  dialog.append(body);
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+function isQuestRequirementLine(line) {
+  return typeof line === "string" && line.startsWith("请完成");
 }
 
 function showCompletedQuest(quest) {
-  showDialog(quest.title, [
+  showQuestLetterDialog(quest.title, [
     quest.description || "这条猫咪委托已经完成。",
-    "状态：已完成",
-    quest.reward_card_title ? `已获得：${quest.reward_card_title}` : "感谢卡已收入图鉴。",
+    getQuestRequirementText(quest),
+    quest.reward_card_title ? `已获得卡片：${quest.reward_card_title}` : "感谢卡已收入图鉴。",
     getRewardSummaryText(quest),
   ], [
     {
@@ -777,21 +963,27 @@ function showCompletedQuest(quest) {
       onClick: () => showRewardCardPreview(quest),
     },
     { label: "知道了", className: "primary-btn" },
-  ]);
+  ], { status: "已完成" });
 }
 
-function isGame(quest, gameKey) {
-  if (quest.game_key === gameKey) return true;
-  if (gameKey === "fishing") return quest.type === "fishing";
-  if (gameKey === "merge_cats") return quest.type === "merge";
-  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
-  return false;
+function getQuestRequirementText(quest) {
+  if (quest.type === "dialogue") return "请完成和猫咪的对话";
+  return `请完成${getQuestTypeLabel(quest)}游戏并达到${quest.target_score || getDefaultQuestTarget(quest)}分数`;
+}
+
+function getDefaultQuestTarget(quest) {
+  if (isGame(quest, "merge")) return 260;
+  if (isGame(quest, "fishing")) return 1;
+  return 1;
+}
+
+function isGame(quest, type) {
+  return quest?.type === type;
 }
 
 function showRewardCardPreview(quest) {
   const title = quest.reward_card_title || "猫咪感谢卡";
   const imageUrl = api.getResourceUrl(quest.reward_image_path);
-  const imageLabel = quest.reward_image_label || "感谢卡图片";
   const rewards = api.getQuestRewards(quest);
   const dialog = el("dialog", { class: "reward-card-dialog" });
   const close = () => {
@@ -801,10 +993,9 @@ function showRewardCardPreview(quest) {
 
   const image = imageUrl
     ? el("figure", { class: "reward-card-image has-image" }, [
-        el("img", { src: imageUrl, alt: imageLabel, loading: "lazy" }),
-        el("figcaption", { text: imageLabel }),
+        el("img", { src: imageUrl, alt: title, loading: "lazy" }),
       ])
-    : el("div", { class: "reward-card-image", text: imageLabel });
+    : el("div", { class: "reward-card-image", text: "感谢卡" });
 
   dialog.append(
     el("div", { class: "dialog-body reward-card-body" }, [

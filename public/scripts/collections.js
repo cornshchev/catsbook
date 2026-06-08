@@ -36,10 +36,9 @@ function renderCards(items) {
 
 function renderCollectionImage(item) {
   if (!item.unlocked) return el("div", { class: "collection-image", text: "?" });
-  if (!item.image_url) return el("div", { class: "collection-image", text: item.image_label || "感谢卡图片" });
+  if (!item.image_url) return el("div", { class: "collection-image", text: "感谢卡" });
   return el("figure", { class: "collection-image has-image" }, [
-    el("img", { src: item.image_url, alt: item.image_label || item.title || "感谢卡图片", loading: "lazy" }),
-    item.image_label ? el("figcaption", { text: item.image_label }) : "",
+    el("img", { src: item.image_url, alt: item.title || "感谢卡", loading: "lazy" }),
   ]);
 }
 

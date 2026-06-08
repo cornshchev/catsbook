@@ -234,7 +234,7 @@ function renderPost(post) {
 /** 获取任务按钮文字 */
 function getQuestButtonLabel(quest) {
   if (isGame(quest, "fishing")) return "接受钓鱼任务";
-  if (isGame(quest, "merge_cats")) return "接受游戏任务";
+  if (isGame(quest, "merge")) return "接受游戏任务";
   if (isGame(quest, "paw_on_top")) return "接受猫爪挑战";
   return "查看任务";
 }
@@ -292,7 +292,7 @@ async function handleQuest(quest) {
     return;
   }
 
-  if (isGame(quest, "merge_cats")) {
+  if (isGame(quest, "merge")) {
     try {
       await api.startQuest(playerId, quest.id);
       api.setPendingMergeQuest(quest);
@@ -338,10 +338,6 @@ async function handleQuest(quest) {
   window.location.href = "./quests.html";
 }
 
-function isGame(quest, gameKey) {
-  if (quest.game_key === gameKey) return true;
-  if (gameKey === "fishing") return quest.type === "fishing";
-  if (gameKey === "merge_cats") return quest.type === "merge";
-  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
-  return false;
+function isGame(quest, type) {
+  return quest?.type === type;
 }

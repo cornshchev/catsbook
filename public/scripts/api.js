@@ -152,14 +152,12 @@ const demoSeed = {
       title: "补全欢迎小纸条",
       description: "和米米进行一次短对话，熟悉接受与完成任务。",
       type: "dialogue",
-      game_key: "dialogue",
       difficulty: 1,
       target_score: 0,
       unlock_key: "liked_post:first-morning",
       reward_affection: 12,
       reward_card_title: "米米的窗台谢卡",
       reward_card_text: "谢谢你把第一张小纸条读完。以后阳光也分你一半。",
-      reward_image_label: "窗台上的三花猫剪影",
       reward_image_path: "cards/mimi-window-card.png",
     },
     {
@@ -169,14 +167,12 @@ const demoSeed = {
       title: "钓一条闪亮鱼",
       description: "在河边小游戏中钓到鱼，帮助阿池完成巡逻记录。",
       type: "fishing",
-      game_key: "fishing",
       difficulty: 1,
       target_score: 0,
       unlock_key: "completed_welcome_dialogue",
       reward_affection: 18,
       reward_card_title: "阿池的闪亮鱼谢卡",
       reward_card_text: "你拉杆的样子还不错。下次河边的位置，给你留一个。",
-      reward_image_label: "闪亮鱼与河边爪印",
       reward_image_path: "cards/achi-fish-card.png",
     },
     {
@@ -186,14 +182,12 @@ const demoSeed = {
       title: "像素猫头合成练习",
       description: "把掉落的小猫头合成更大的猫头，达到目标分数后完成糯糯的纸箱实验。",
       type: "merge",
-      game_key: "merge_cats",
       difficulty: 1,
       target_score: 260,
       unlock_key: "completed_welcome_dialogue",
       reward_affection: 8,
       reward_card_title: "糯糯的像素猫头卡",
       reward_card_text: "你把小小猫头合成了一只很有气势的大猫头。纸箱展的入口亮起来了。",
-      reward_image_label: "像素猫头堆叠图",
       reward_image_path: "cards/nono-merge-card.png",
     },
     {
@@ -203,14 +197,12 @@ const demoSeed = {
       title: "雨后反光鱼",
       description: "米米也可以调用钓鱼小游戏。这次鱼游得更快，考验拉杆节奏。",
       type: "fishing",
-      game_key: "fishing",
       difficulty: 2,
       target_score: 0,
       unlock_key: "quest_completed:shiny-fish",
       reward_affection: 14,
       reward_card_title: "米米的雨后钓点卡",
       reward_card_text: "原来雨后的水面也会发动态。谢谢你帮我盯住那道光。",
-      reward_image_label: "雨滴与小鱼影子",
       reward_image_path: "cards/mimi-rain-fish-card.png",
     },
     {
@@ -220,14 +212,12 @@ const demoSeed = {
       title: "河边猫头堆叠记录",
       description: "阿池调用合成小游戏。目标分数更高，掉落节奏也更紧。",
       type: "merge",
-      game_key: "merge_cats",
       difficulty: 2,
       target_score: 520,
       unlock_key: "quest_completed:merge-cats",
       reward_affection: 16,
       reward_card_title: "阿池的河边合成卡",
       reward_card_text: "虽然这不是鱼，但堆起来确实很像一份严肃的巡逻报告。",
-      reward_image_label: "河边像素猫头塔",
       reward_image_path: "cards/achi-merge-card.png",
     },
     {
@@ -237,14 +227,12 @@ const demoSeed = {
       title: "猫爪在上练习赛",
       description: "和米米玩一局轻松的拍手小游戏。看准猫爪伸出来的时机，按住或短按鼠标出手。",
       type: "paw_on_top",
-      game_key: "paw_on_top",
       difficulty: 1,
       target_score: 0,
       unlock_key: "quest_completed:shiny-fish",
       reward_affection: 12,
       reward_card_title: "米米的猫爪在上感谢卡",
       reward_card_text: "你的反应很温柔，拍到了爪爪，也没有吓到猫。",
-      reward_image_label: "被轻轻拍到的猫爪",
       reward_image_path: "cards/mimi-card-1.jpg",
     },
   ],
@@ -258,8 +246,6 @@ const demoSeed = {
       parent_comment_id: null,
       player_id: null,
       cat_id: "cat-mimi",
-      author_type: "cat",
-      source_type: "preset",
       body: "评论区也晒到太阳了。",
       sort_order: 1,
       created_at: "2026-05-22T09:12:00+08:00",
@@ -272,12 +258,10 @@ const demoSeed = {
       post_id: null,
       match_type: "contains",
       keyword: "鱼",
+      reply_body: "你也想到鱼了吗？我先把爪垫搓热，等一个夜宵机会。",
       once_per_player: false,
       sort_order: 1,
       is_enabled: true,
-      outputs: [
-        { reply_cat_id: "cat-mimi", parent_target: "player_comment", body: "你也想到鱼了吗？我先把爪垫搓热，等一个夜宵机会。", sort_order: 1 },
-      ],
     },
     {
       id: "reply-rule-achi-river",
@@ -285,12 +269,10 @@ const demoSeed = {
       post_id: null,
       match_type: "contains",
       keyword: "河",
+      reply_body: "河边的风向变了，带上耐心再来找我。",
       once_per_player: false,
       sort_order: 1,
       is_enabled: true,
-      outputs: [
-        { reply_cat_id: "cat-achi", parent_target: "player_comment", body: "河边的风向变了，带上耐心再来找我。", sort_order: 1 },
-      ],
     },
     {
       id: "reply-rule-nono-box",
@@ -298,15 +280,14 @@ const demoSeed = {
       post_id: null,
       match_type: "contains",
       keyword: "纸箱",
+      reply_body: "纸箱不是箱子，是通往下一层谜题的门。",
       once_per_player: false,
       sort_order: 1,
       is_enabled: true,
-      outputs: [
-        { reply_cat_id: "cat-nono", parent_target: "player_comment", body: "纸箱不是箱子，是通往下一层谜题的门。", sort_order: 1 },
-      ],
     },
   ],
   commentRuleTriggers: [],
+  seenPosts: null,
   questStates: {},
   friendships: {},
   inventory: { food: 0, treat: 0, toy: 0 },
@@ -625,14 +606,21 @@ export async function updatePlayerProfile(playerId, displayName) {
 export async function listFeedPosts(playerId) {
   if (shouldUseDemo()) {
     const state = readDemo();
-    return state.posts
+    const unlockedPosts = state.posts
       .filter((post) => isUnlocked(state, post.unlock_key))
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((post) => ({
+      .sort((a, b) => a.sort_order - b.sort_order);
+
+    if (!Array.isArray(state.seenPosts)) {
+      state.seenPosts = unlockedPosts.map((post) => post.id);
+      writeDemo(state);
+    }
+
+    return unlockedPosts.map((post) => ({
         ...withPostImages(post),
         cat: getCat(state, post.cat_id),
         quest: getPostQuest(state, post.quest_id),
         liked: state.likes.includes(post.id),
+        is_new: !state.seenPosts.includes(post.id),
         comments: getPostComments(state, post.id),
         comment_mode: post.comment_mode || "free",
         fixed_comment_body: post.fixed_comment_body || "",
@@ -647,9 +635,29 @@ export async function listFeedPosts(playerId) {
     cat: withCatResource(post.cat),
     quest: normalizeFeedQuest(post.quest),
     comments: normalizeComments(post.comments),
+    is_new: Boolean(post.is_new),
     comment_mode: post.comment_mode || "free",
     fixed_comment_body: post.fixed_comment_body || "",
   }));
+}
+
+export async function markFeedPostsSeen(playerId, postIds) {
+  const ids = Array.isArray(postIds) ? postIds.filter(Boolean) : [];
+  if (!ids.length) return;
+
+  if (shouldUseDemo()) {
+    const state = readDemo();
+    state.seenPosts = Array.isArray(state.seenPosts) ? state.seenPosts : [];
+    ids.forEach((id) => {
+      if (!state.seenPosts.includes(id)) state.seenPosts.push(id);
+    });
+    writeDemo(state);
+    return;
+  }
+
+  await ensureSupabase();
+  const { error } = await supabase.rpc("mark_feed_posts_seen", { p_player_id: playerId, p_post_ids: ids });
+  if (error) throw new Error(normalizeError(error));
 }
 
 function getPostComments(state, postId) {
@@ -668,7 +676,6 @@ function normalizeDemoComment(state, comment) {
     author_avatar_emoji: cat?.avatar_emoji || "你",
     author_avatar_url: cat?.avatar_url || "",
     parent_comment_id: comment.parent_comment_id || null,
-    source_type: comment.source_type || "player",
     sort_order: comment.sort_order || 100,
     liked: (state.commentLikes || []).includes(comment.id),
   };
@@ -680,10 +687,9 @@ function normalizeComments(comments) {
     ...comment,
     author_name: comment.author_name || "猫书玩家",
     author_handle: comment.author_handle || "玩家评论",
-    author_avatar_emoji: comment.author_avatar_emoji || (comment.author_type === "cat" ? "猫" : "你"),
+    author_avatar_emoji: comment.author_avatar_emoji || (comment.cat_id ? "猫" : "你"),
     author_avatar_url: getResourceUrl(comment.author_avatar_path || comment.author_avatar_url),
     parent_comment_id: comment.parent_comment_id || null,
-    source_type: comment.source_type || "player",
     sort_order: comment.sort_order || 100,
     liked: Boolean(comment.liked),
   }));
@@ -693,19 +699,8 @@ function normalizeFeedQuest(quest) {
   if (!quest) return null;
   return {
     ...quest,
-    game_key: normalizeGameKey(quest),
     status: quest.status || "available",
   };
-}
-
-function normalizeGameKey(quest) {
-  if (!quest) return null;
-  if (quest.game_key) return quest.game_key;
-  if (quest.type === "fishing") return "fishing";
-  if (quest.type === "merge") return "merge_cats";
-  if (quest.type === "paw_on_top") return "paw_on_top";
-  if (quest.type === "dialogue") return "dialogue";
-  return quest.game_key || null;
 }
 
 function getPostQuest(state, questId) {
@@ -713,7 +708,6 @@ function getPostQuest(state, questId) {
   if (!quest) return null;
   return {
     ...quest,
-    game_key: normalizeGameKey(quest),
     status: state.questStates[quest.id] || "available",
   };
 }
@@ -731,28 +725,32 @@ export async function likePost(playerId, postId) {
   if (error) throw new Error(normalizeError(error));
 }
 
-export async function addComment(playerId, postId, body) {
+export async function addComment(playerId, postId, body, parentCommentId = null) {
   if (shouldUseDemo()) {
     const state = readDemo();
     const now = new Date().toISOString();
     const post = state.posts.find((item) => item.id === postId);
-    if (post?.comment_mode === "fixed" && (state.comments || []).some((comment) => (
+    const parentComment = parentCommentId ? (state.comments || []).find((comment) => comment.id === parentCommentId && comment.post_id === postId) : null;
+    if (parentCommentId && !parentComment) {
+      throw new Error("要回复的评论不存在。");
+    }
+    if (parentComment?.cat_id) {
+      throw new Error("猫咪剧情回复不能继续回复。");
+    }
+    if (!parentCommentId && post?.comment_mode === "fixed" && (state.comments || []).some((comment) => (
       comment.post_id === postId
       && comment.player_id === playerId
-      && comment.author_type === "player"
-      && comment.source_type === "player"
+      && !comment.parent_comment_id
     ))) {
       throw new Error("这条剧情评论已经发送过啦。");
     }
-    const finalBody = post?.comment_mode === "fixed" ? post.fixed_comment_body : body;
+    const finalBody = !parentCommentId && post?.comment_mode === "fixed" ? post.fixed_comment_body : body;
     const playerComment = {
       id: crypto.randomUUID(),
       player_id: playerId,
       post_id: postId,
-      parent_comment_id: null,
+      parent_comment_id: parentCommentId || null,
       cat_id: null,
-      author_type: "player",
-      source_type: "player",
       body: finalBody,
       sort_order: 1000,
       created_at: now,
@@ -760,7 +758,7 @@ export async function addComment(playerId, postId, body) {
     state.comments = state.comments || [];
     state.comments.push(playerComment);
 
-    const replies = createDemoAutoReplies(state, post, finalBody, playerComment);
+    const replies = parentCommentId ? [] : createDemoAutoReplies(state, post, finalBody, playerComment);
     replies.forEach((reply) => state.comments.push(reply));
 
     writeDemo(state);
@@ -771,11 +769,50 @@ export async function addComment(playerId, postId, body) {
     };
   }
   await ensureSupabase();
-  const { data, error } = await supabase.rpc("create_post_comment", {
+  const payload = {
     p_player_id: playerId,
     p_post_id: postId,
     p_body: body,
-  });
+  };
+  if (parentCommentId) payload.p_parent_comment_id = parentCommentId;
+  const { data, error } = await supabase.rpc("create_post_comment", payload);
+  if (error) throw new Error(normalizeError(error));
+  return {
+    ...data,
+    comments: normalizeComments(data?.comments),
+  };
+}
+
+export async function deleteComment(playerId, commentId) {
+  if (shouldUseDemo()) {
+    const state = readDemo();
+    const comment = (state.comments || []).find((item) => item.id === commentId);
+    if (!comment) throw new Error("这条评论不存在。");
+    if (comment.player_id !== playerId) {
+      throw new Error("只能删除自己的评论。");
+    }
+    const removeIds = new Set([commentId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      (state.comments || []).forEach((item) => {
+        if (item.parent_comment_id && removeIds.has(item.parent_comment_id) && !removeIds.has(item.id)) {
+          removeIds.add(item.id);
+          changed = true;
+        }
+      });
+    }
+    state.comments = (state.comments || []).filter((item) => !removeIds.has(item.id));
+    state.commentLikes = (state.commentLikes || []).filter((id) => !removeIds.has(id));
+    writeDemo(state);
+    return {
+      post_id: comment.post_id,
+      comments: getPostComments(state, comment.post_id),
+    };
+  }
+
+  await ensureSupabase();
+  const { data, error } = await supabase.rpc("delete_post_comment", { p_player_id: playerId, p_comment_id: commentId });
   if (error) throw new Error(normalizeError(error));
   return {
     ...data,
@@ -787,7 +824,7 @@ export async function likeComment(playerId, commentId) {
   if (shouldUseDemo()) {
     const state = readDemo();
     const comment = (state.comments || []).find((item) => item.id === commentId);
-    if (comment?.author_type === "player" && comment.player_id === playerId) {
+    if (comment?.player_id === playerId) {
       throw new Error("不能给自己的评论点赞。");
     }
     state.commentLikes = state.commentLikes || [];
@@ -814,10 +851,7 @@ function createDemoAutoReplies(state, post, body, playerComment) {
     .filter((item) => !item.cat_id || item.cat_id === post.cat_id)
     .filter((item) => !item.post_id || item.post_id === post.id)
     .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-    .find((item) => (
-      (post.comment_mode === "fixed" && item.match_type === "fixed")
-      || (item.match_type !== "fixed" && matchesCommentRule(item, body))
-    ) && canTriggerDemoRule(state, item));
+    .find((item) => matchesCommentRule(item, body) && canTriggerDemoRule(state, item));
 
   if (!rule) return [];
   if (rule.once_per_player) {
@@ -825,30 +859,16 @@ function createDemoAutoReplies(state, post, body, playerComment) {
     state.commentRuleTriggers.push({ rule_id: rule.id, player_id: state.player?.id });
   }
 
-  let previousReplyId = null;
-  return (rule.outputs || [])
-    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-    .map((output) => {
-      const id = crypto.randomUUID();
-      const parentId = output.parent_target === "root"
-        ? null
-        : output.parent_target === "previous_reply"
-          ? previousReplyId || playerComment.id
-          : playerComment.id;
-      previousReplyId = id;
-      return {
-        id,
-        player_id: null,
-        post_id: post.id,
-        parent_comment_id: parentId,
-        cat_id: output.reply_cat_id || post.cat_id,
-        author_type: "cat",
-        source_type: "auto_reply",
-        body: output.body,
-        sort_order: 1000 + (output.sort_order || 1),
-        created_at: new Date(Date.now() + 350 + (output.sort_order || 1) * 100).toISOString(),
-      };
-    });
+  return [{
+    id: crypto.randomUUID(),
+    player_id: null,
+    post_id: post.id,
+    parent_comment_id: playerComment.id,
+    cat_id: post.cat_id,
+    body: rule.reply_body,
+    sort_order: 1001,
+    created_at: new Date(Date.now() + 450).toISOString(),
+  }];
 }
 
 function canTriggerDemoRule(state, rule) {
@@ -888,7 +908,6 @@ export async function listQuests(playerId) {
   if (error) throw new Error(normalizeError(error));
   return (data || []).map((quest) => ({
     ...quest,
-    game_key: normalizeGameKey(quest),
     cat: withCatResource(quest.cat),
   }));
 }
@@ -928,7 +947,6 @@ export async function completeQuest(playerId, questId) {
           cat_id: quest.cat_id,
           title: quest.reward_card_title,
           body: quest.reward_card_text,
-          image_label: quest.reward_image_label,
           image_path: quest.reward_image_path,
         });
       }
@@ -1003,9 +1021,9 @@ export async function getCollections(playerId) {
       return card ? { unlocked: true, ...withResourceImage(card), cat: getCat(state, card.cat_id) } : { unlocked: false, quest };
     });
     const games = [
-      { id: "fishing", title: "钓鱼小游戏", description: "重玩已解锁的钓鱼玩法", href: "./fishing.html", unlocked: state.quests.some((quest) => quest.game_key === "fishing" && state.questStates[quest.id] === "completed") },
-      { id: "merge-cats", title: "合成大猫咪", description: "重玩已解锁的合成玩法", href: "./merge.html", unlocked: state.quests.some((quest) => quest.game_key === "merge_cats" && state.questStates[quest.id] === "completed") },
-      { id: "paw-on-top", title: "猫爪在上", description: "重玩已解锁的拍爪玩法", href: "./paw-on-top.html", unlocked: state.quests.some((quest) => quest.game_key === "paw_on_top" && state.questStates[quest.id] === "completed") },
+      { id: "fishing", title: "钓鱼小游戏", description: "重玩已解锁的钓鱼玩法", href: "./fishing.html", unlocked: state.quests.some((quest) => quest.type === "fishing" && state.questStates[quest.id] === "completed") },
+      { id: "merge-cats", title: "合成大猫咪", description: "重玩已解锁的合成玩法", href: "./merge.html", unlocked: state.quests.some((quest) => quest.type === "merge" && state.questStates[quest.id] === "completed") },
+      { id: "paw-on-top", title: "猫爪在上", description: "重玩已解锁的拍爪玩法", href: "./paw-on-top.html", unlocked: state.quests.some((quest) => quest.type === "paw_on_top" && state.questStates[quest.id] === "completed") },
     ];
     return { friends, cards, games };
   }

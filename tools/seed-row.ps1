@@ -23,7 +23,11 @@ $Aliases = @{
   "dialogue_nodes" = "dialogue"
   "rule" = "reply-rule"
   "reply" = "reply-rule"
-  "comment" = "reply-rule"
+  "preset" = "preset-comment"
+  "preset_comment" = "preset-comment"
+  "preset-comment" = "preset-comment"
+  "comment" = "preset-comment"
+  "comments" = "preset-comment"
 }
 
 if ($Aliases.ContainsKey($Type)) {
@@ -40,6 +44,7 @@ Types:
   post        posts row
   dialogue    dialogue_nodes row
   reply-rule  comment_reply_rules row
+  comment     preset comments row
 
 Examples:
   powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 post
@@ -88,10 +93,11 @@ function Get-NextSortOrder {
     [string]$SeedText,
     [string]$TableName,
     [string]$Prefix,
-    [string]$SortPattern
+    [string]$SortPattern,
+    [switch]$ScanAll
   )
 
-  $Block = Get-InsertBlock -SeedText $SeedText -TableName $TableName
+  $Block = if ($ScanAll) { $SeedText } else { Get-InsertBlock -SeedText $SeedText -TableName $TableName }
   if (-not $Block) {
     return 1
   }
@@ -202,7 +208,7 @@ switch ($Type) {
     $Uuid = New-SeedUuid -SeedText $Seed -Prefix $Prefix
     $TableName = "quests"
     $Row = Build-Row -Uuid $Uuid -SortOrder 0 -Template @'
-('__UUID__', '', public.seed_cat_id(''), '', '', 'dialogue', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', '', 'cards/'),
+('__UUID__', '', id('cats', ''), '', '', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', 'cards/'),
 '@
   }
   "post" {
@@ -212,26 +218,35 @@ switch ($Type) {
     $SortOrder = Get-NextSortOrder -SeedText $Seed -TableName "posts" -Prefix $Prefix -SortPattern $PostSortPattern
     $TableName = "posts"
     $Row = Build-Row -Uuid $Uuid -SortOrder $SortOrder -Template @'
-('__UUID__', '', public.seed_cat_id(''), public.seed_quest_id(''), '', '', 'posts/', 'quest_completed:', 'free', null, __SORT__, default),
+('__UUID__', '', id('cats', ''), id('quests', ''), '', '', 'posts/', 'quest_completed:', 'free', null, __SORT__, default),
 '@
   }
   "dialogue" {
-    $Prefix = "40000000"
+    $Prefix = "60000000"
     $Uuid = New-SeedUuid -SeedText $Seed -Prefix $Prefix
     $SortOrder = Get-NextSortOrder -SeedText $Seed -TableName "dialogue_nodes" -Prefix $Prefix
     $TableName = "dialogue_nodes"
     $Row = Build-Row -Uuid $Uuid -SortOrder $SortOrder -Template @'
-('__UUID__', public.seed_cat_id(''), '', '', '', 0, __SORT__),
+('__UUID__', id('cats', ''), '', '', '', 0, __SORT__),
 '@
   }
   "reply-rule" {
-    $Prefix = "50000000"
+    $Prefix = "40000000"
     $Uuid = New-SeedUuid -SeedText $Seed -Prefix $Prefix
     $Pattern = "'{uuid}'[^\n]*,\s*(\d+)\s*,\s*(?:true|false)\s*\),?"
     $SortOrder = Get-NextSortOrder -SeedText $Seed -TableName "comment_reply_rules" -Prefix $Prefix -SortPattern $Pattern
     $TableName = "comment_reply_rules"
     $Row = Build-Row -Uuid $Uuid -SortOrder $SortOrder -Template @'
-('__UUID__', '', public.seed_cat_id(''), null, 'contains', '', false, __SORT__, true),
+('__UUID__', '', id('cats', ''), null, 'contains', '', '', false, __SORT__, true),
+'@
+  }
+  "preset-comment" {
+    $Prefix = "50000000"
+    $Uuid = New-SeedUuid -SeedText $Seed -Prefix $Prefix
+    $SortOrder = Get-NextSortOrder -SeedText $Seed -TableName "comments" -Prefix $Prefix -ScanAll
+    $TableName = "comments"
+    $Row = Build-Row -Uuid $Uuid -SortOrder $SortOrder -Template @'
+('__UUID__', '', id('posts', ''), null, id('cats', ''), '', __SORT__),
 '@
   }
   default {

@@ -26,7 +26,7 @@ async function loadQuests() {
 
 function renderQuest(quest) {
   const card = el("article", { class: "quest-card" });
-  const actionRow = el("div", { class: "action-strip" });
+  const actionRow = el("div", { class: "quest-card-actions" });
 
   if (quest.status === "available") {
     actionRow.append(el("button", { class: "primary-btn", type: "button", text: "开始任务", onclick: () => startQuest(quest) }));
@@ -39,15 +39,33 @@ function renderQuest(quest) {
   }
 
   card.append(
-    el("div", { class: "stat-row" }, [
-      el("span", { class: "badge", text: formatQuestType(quest.type) }),
-      el("span", { text: formatQuestStatus(quest.status) }),
+    el("div", { class: "quest-card-header" }, [
+      el("div", { class: "quest-card-kicker" }, [
+        el("span", { class: "badge", text: formatQuestType(quest.type) }),
+        el("span", { class: `quest-status-pill ${quest.status || "available"}`, text: formatQuestStatus(quest.status) }),
+      ]),
+      el("p", { class: "quest-card-cat", text: quest.cat?.name || "未知猫咪" }),
     ]),
-    el("h2", { text: quest.title }),
-    el("p", { class: "muted", text: quest.description }),
-    el("p", { class: "muted", text: `委托猫咪：${quest.cat?.name || "未知猫咪"}` }),
-    quest.game_key && quest.game_key !== "dialogue" ? el("p", { class: "muted", text: getQuestGameMeta(quest) }) : "",
-    el("p", { class: "muted", text: getRewardText(quest) }),
+    el("div", { class: "quest-card-body" }, [
+      el("div", { class: "quest-card-main" }, [
+        el("h2", { text: quest.title }),
+        el("p", { class: "muted", text: quest.description }),
+      ]),
+      el("div", { class: "quest-card-side" }, [
+        el("div", { class: "quest-info-box" }, [
+          el("span", { text: "委托猫咪" }),
+          el("strong", { text: quest.cat?.name || "未知猫咪" }),
+        ]),
+        isPlayableQuest(quest) ? el("div", { class: "quest-info-box" }, [
+          el("span", { text: "玩法" }),
+          el("strong", { text: getQuestGameMeta(quest) }),
+        ]) : "",
+        el("div", { class: "quest-info-box reward" }, [
+          el("span", { text: "奖励" }),
+          el("strong", { text: getRewardText(quest) }),
+        ]),
+      ]),
+    ]),
     actionRow,
   );
   return card;
@@ -58,19 +76,19 @@ function getRewardText(quest) {
   const food = 2 + (difficulty - 1) * 2;
   const treat = 1 + (difficulty - 1);
   const toy = difficulty >= 2 ? 1 + Math.floor(difficulty / 2) : 1;
-  return `奖励：猫粮 ${food}、猫条 ${treat}、玩具 ${toy}`;
+  return `猫粮 ${food}、猫条 ${treat}、玩具 ${toy}`;
 }
 
 function getQuestGameMeta(quest) {
-  if (isGame(quest, "fishing")) return `小游戏：钓鱼 · 鱼速难度 ${quest.target_score || 1}`;
-  if (isGame(quest, "merge_cats")) return `小游戏：合成 · 目标分数 ${quest.target_score || 260} · 难度 ${quest.difficulty || 1}`;
-  if (isGame(quest, "paw_on_top")) return `小游戏：猫爪在上 · 难度 ${quest.difficulty || 1}`;
-  return `小游戏：${quest.game_key}`;
+  if (isGame(quest, "fishing")) return `钓鱼 · 鱼速 ${quest.target_score || 1}`;
+  if (isGame(quest, "merge")) return `合成 · ${quest.target_score || 260} 分`;
+  if (isGame(quest, "paw_on_top")) return `猫爪在上 · 难度 ${quest.difficulty || 1}`;
+  return formatQuestType(quest.type);
 }
 
 function getQuestActionLabel(quest) {
   if (isGame(quest, "fishing")) return "进入钓鱼";
-  if (isGame(quest, "merge_cats")) return "进入合成";
+  if (isGame(quest, "merge")) return "进入合成";
   if (isGame(quest, "paw_on_top")) return "进入猫爪在上";
   return "完成任务";
 }
@@ -81,7 +99,7 @@ function openQuestGame(quest) {
     window.location.href = "./fishing.html";
     return true;
   }
-  if (isGame(quest, "merge_cats")) {
+  if (isGame(quest, "merge")) {
     api.setPendingMergeQuest(quest);
     window.location.href = "./merge.html";
     return true;
@@ -94,12 +112,12 @@ function openQuestGame(quest) {
   return false;
 }
 
-function isGame(quest, gameKey) {
-  if (quest.game_key === gameKey) return true;
-  if (gameKey === "fishing") return quest.type === "fishing";
-  if (gameKey === "merge_cats") return quest.type === "merge";
-  if (gameKey === "paw_on_top") return quest.type === "paw_on_top";
-  return false;
+function isGame(quest, type) {
+  return quest?.type === type;
+}
+
+function isPlayableQuest(quest) {
+  return ["fishing", "merge", "paw_on_top"].includes(quest?.type);
 }
 
 async function startQuest(quest) {

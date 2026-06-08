@@ -4,9 +4,9 @@ alter table public.quests enable row level security;
 alter table public.posts enable row level security;
 alter table public.post_images enable row level security;
 alter table public.post_likes enable row level security;
+alter table public.player_seen_posts enable row level security;
 alter table public.comments enable row level security;
 alter table public.comment_reply_rules enable row level security;
-alter table public.comment_reply_outputs enable row level security;
 alter table public.comment_likes enable row level security;
 alter table public.player_comment_rule_triggers enable row level security;
 alter table public.player_quests enable row level security;
@@ -24,9 +24,9 @@ grant select on public.quests to authenticated;
 grant select on public.posts to authenticated;
 grant select on public.post_images to authenticated;
 grant select, insert, update on public.post_likes to authenticated;
+grant select, insert, update on public.player_seen_posts to authenticated;
 grant select, insert on public.comments to authenticated;
 grant select on public.comment_reply_rules to authenticated;
-grant select on public.comment_reply_outputs to authenticated;
 grant select, insert on public.comment_likes to authenticated;
 grant select on public.player_comment_rule_triggers to authenticated;
 grant select, insert, update on public.player_quests to authenticated;
@@ -74,22 +74,35 @@ create policy "post_likes_update_own" on public.post_likes for update using (
   exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
 );
 
+drop policy if exists "player_seen_posts_read_own" on public.player_seen_posts;
+create policy "player_seen_posts_read_own" on public.player_seen_posts for select using (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
+drop policy if exists "player_seen_posts_insert_own" on public.player_seen_posts;
+create policy "player_seen_posts_insert_own" on public.player_seen_posts for insert with check (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
+drop policy if exists "player_seen_posts_update_own" on public.player_seen_posts;
+create policy "player_seen_posts_update_own" on public.player_seen_posts for update using (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+) with check (
+  exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
+);
+
 drop policy if exists "comments_read_authenticated" on public.comments;
 create policy "comments_read_authenticated" on public.comments for select to authenticated using (true);
 
 drop policy if exists "comments_insert_own" on public.comments;
 create policy "comments_insert_own" on public.comments for insert with check (
-  author_type = 'player'
-  and cat_id is null
+  cat_id is null
   and
   exists (select 1 from public.players p where p.id = player_id and p.auth_user_id = auth.uid())
 );
 
 drop policy if exists "comment_reply_rules_read_authenticated" on public.comment_reply_rules;
 create policy "comment_reply_rules_read_authenticated" on public.comment_reply_rules for select to authenticated using (true);
-
-drop policy if exists "comment_reply_outputs_read_authenticated" on public.comment_reply_outputs;
-create policy "comment_reply_outputs_read_authenticated" on public.comment_reply_outputs for select to authenticated using (true);
 
 drop policy if exists "comment_likes_read_own" on public.comment_likes;
 create policy "comment_likes_read_own" on public.comment_likes for select using (

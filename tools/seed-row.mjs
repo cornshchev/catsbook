@@ -20,7 +20,7 @@ const tableConfigs = {
     label: "quests",
     prefix: "20000000",
     row: ({ uuid }) =>
-      `('${uuid}', '', public.seed_cat_id(''), '', '', 'dialogue', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', '', 'cards/'),`,
+      `('${uuid}', '', id('cats', ''), '', '', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', 'cards/'),`,
   },
   post: {
     label: "posts",
@@ -29,23 +29,31 @@ const tableConfigs = {
     sortPattern:
       "'{uuid}'[^\\n]*,\\s*(\\d+)\\s*,\\s*(?:default|null|'[^']*')\\s*\\),?",
     row: ({ uuid, sortOrder }) =>
-      `('${uuid}', '', public.seed_cat_id(''), public.seed_quest_id(''), '', '', 'posts/', 'quest_completed:', 'free', null, ${sortOrder}, default),`,
+      `('${uuid}', '', id('cats', ''), id('quests', ''), '', '', 'posts/', 'quest_completed:', 'free', null, ${sortOrder}, default),`,
   },
   dialogue: {
     label: "dialogue_nodes",
-    prefix: "40000000",
+    prefix: "60000000",
     withSort: true,
     row: ({ uuid, sortOrder }) =>
-      `('${uuid}', public.seed_cat_id(''), '', '', '', 0, ${sortOrder}),`,
+      `('${uuid}', id('cats', ''), '', '', '', 0, ${sortOrder}),`,
   },
   "reply-rule": {
     label: "comment_reply_rules",
-    prefix: "50000000",
+    prefix: "40000000",
     withSort: true,
     sortPattern:
       "'{uuid}'[^\\n]*,\\s*(\\d+)\\s*,\\s*(?:true|false)\\s*\\),?",
     row: ({ uuid, sortOrder }) =>
-      `('${uuid}', '', public.seed_cat_id(''), null, 'contains', '', false, ${sortOrder}, true),`,
+      `('${uuid}', '', id('cats', ''), null, 'contains', '', '', false, ${sortOrder}, true),`,
+  },
+  "preset-comment": {
+    label: "comments",
+    prefix: "50000000",
+    withSort: true,
+    scanAllForSort: true,
+    row: ({ uuid, sortOrder }) =>
+      `('${uuid}', '', id('posts', ''), null, id('cats', ''), '', ${sortOrder}),`,
   },
 };
 
@@ -60,7 +68,11 @@ const aliases = {
   dialogue_nodes: "dialogue",
   rule: "reply-rule",
   reply: "reply-rule",
-  comment: "reply-rule",
+  preset: "preset-comment",
+  preset_comment: "preset-comment",
+  "preset-comment": "preset-comment",
+  comment: "preset-comment",
+  comments: "preset-comment",
 };
 
 if (isCliEntry()) {
@@ -84,6 +96,7 @@ export async function generateSeedRow(requested) {
   post        生成 posts 行
   dialogue    生成 dialogue_nodes 行
   reply-rule  生成 comment_reply_rules 行
+  comment     生成预设 comments 行
 
 示例:
   node tools/seed-row.mjs post`);
@@ -113,7 +126,7 @@ function getNextUuidNumber(seedText, prefix) {
 }
 
 function getNextSortOrder(seedText, config) {
-  const block = getInsertBlock(seedText, config.label);
+  const block = config.scanAllForSort ? seedText : getInsertBlock(seedText, config.label);
   if (!block) return 1;
 
   const pattern = config.sortPattern || "'{uuid}'[^\\n]*,\\s*(\\d+)\\s*\\),?";

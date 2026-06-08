@@ -149,7 +149,7 @@ public/resources/avatars/mimi.png
 
 1. 在 `public.quests` 新增任务，设置：
    - `type`：`dialogue`、`merge`、`paw_on_top`、`fishing`、`collect`、`social`
-   - `game_key`：小游戏入口，例如 `fishing`、`merge_cats` 或 `paw_on_top`。它不属于某只猫，任何猫咪任务都可以调用。
+   - 前端会根据 `type` 自动识别入口：`fishing` 进入钓鱼，`merge` 进入合成，`paw_on_top` 进入猫爪在上，`dialogue` 使用弹窗完成。
    - `difficulty`：小游戏难度，数值越高越难。钓鱼会提升鱼移动速度和失败压力；合成会加快掉落节奏；猫爪在上会缩短猫爪等待和停留时间。
    - `target_score`：合成小游戏的完成分数
    - `unlock_key`：控制解锁条件
@@ -167,7 +167,7 @@ public/resources/avatars/mimi.png
 -- 多图
 ('帖子id', 'farm-1', ..., '图片说明', 'posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg', ..., 16, '2026-06-06')
 ```
-5. 如果要复用小游戏，只需要把新任务的 `game_key` 指向已有小游戏，并调整 `difficulty` / `target_score`。
+5. 如果要复用小游戏，只需要把新任务的 `type` 写成对应玩法，并调整 `difficulty` / `target_score`。
 6. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
 7. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
 8. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
@@ -181,21 +181,20 @@ public/resources/avatars/mimi.png
 - `comment_mode = 'free'`：玩家可以自由评论，按关键词触发自动回复。
 - `comment_mode = 'fixed'`：输入框显示 `fixed_comment_body`，玩家只能发送这句剧情评论。
 
-预设剧情评论在 `public.comments` 中维护：
+预设剧情评论在 `public.comments` 中维护，写 `cat_id` 表示由猫咪发出，写 `parent_comment_id` 表示回复哪条评论：
 
-- `slug`：评论短标识，用于 `public.seed_comment_id('slug')` 引用父评论。
+- `slug`：评论短标识，便于后续维护。
 - `parent_comment_id`：为空是一级评论；填父评论则显示为回复。
-- `source_type = 'preset'`：表示剧情预设评论。
 
-自动回复拆成两张表：
+普通关键词自动回复在 `public.comment_reply_rules` 中维护：
 
 - `cat_id`：哪只猫咪作者的帖子适用。
 - `post_id`：指定某一条帖子；填 `null` 表示这只猫咪的所有帖子都检测。
-- `match_type`：`contains`、`exact`、`regex` 或 `fixed`。
+- `match_type`：`contains`、`exact`、`regex`。
 - `keyword`：触发关键词，你可以随意修改。
+- `reply_body`：命中后由帖子作者猫咪回复玩家的内容。
 - `once_per_player`：是否每个玩家只触发一次。
 - `is_enabled`：是否启用该规则。
-- `comment_reply_outputs`：一条规则可以配置多条回复，每条用 `reply_cat_id` 指定回复猫咪。
 
 评论和自动回复都可以点赞。玩家第一次点赞某条评论会调用 `like_comment` RPC，并获得猫粮 `+1`。
 
@@ -211,6 +210,7 @@ powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 quest
 powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 cat
 powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 dialogue
 powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 reply-rule
+powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 comment
 ```
 
 生成器直接插入seed：
@@ -219,7 +219,9 @@ powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 reply-rule
 powershell -ExecutionPolicy Bypass -File tools/seed-row.ps1 post -Insert
 ```
 
-生成器会读取 `supabase/seed.sql`，自动给对应类型生成下一个固定 UUID；`post`、`dialogue`、`reply-rule` 还会自动生成下一个 `sort_order`。不加 `-Insert` 时只打印 SQL 行；加 `-Insert` 时会直接写入 `seed.sql`。
+生成器会读取 `supabase/seed.sql`，自动给对应类型生成下一个固定 UUID；`post`、`dialogue`、`reply-rule`、`comment` 还会自动生成下一个 `sort_order`。不加 `-Insert` 时只打印 SQL 行；加 `-Insert` 时会直接写入 `seed.sql`。
+
+当前固定 UUID 分段：猫咪 `10000000`，任务 `20000000`，帖子 `30000000`，评论规则 `40000000`，预设评论 `50000000`，好感剧情 `60000000`。
 
 如果本机安装了 Node，也可以使用同等功能的 `node tools/seed-row.mjs post`。
 
@@ -241,7 +243,7 @@ VSCode 中可以打开命令面板，运行 `Tasks: Run Task`，选择：
 - `cbdialogue`
 - `cbreply`
 
-`seed.sql` 顶部提供了 `public.seed_cat_id('slug')`、`public.seed_quest_id('slug')`、`public.seed_post_id('slug')`，新增数据时可以用这些函数通过 slug 引用外键。
+`seed.sql` 顶部提供了 `id('cats', 'mimi')` 形式的辅助函数，表示去对应表里查找指定 `slug` 的 `id`。目前支持 `cats`、`quests`、`posts`、`comments`、`comment_reply_rules`。
 
 ## 如何维护剧情
 
@@ -255,7 +257,7 @@ VSCode 中可以打开命令面板，运行 `Tasks: Run Task`，选择：
 ## 后续扩展建议
 
 - 给帖子、猫咪、感谢卡增加 Supabase Storage 图片字段。
-- 给 `merge_cats` 增加更多像素猫头等级、障碍物或限时目标。
+- 给合成小游戏增加更多像素猫头等级、障碍物或限时目标。
 - 增加背包表，限制每日投喂次数和道具消耗。
 - 每次测试新任务都需要删除数据库，研究一下更简便的自动化方法。
 - 咪咪占卜还没有做
