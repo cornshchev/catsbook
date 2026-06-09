@@ -208,7 +208,7 @@ switch ($Type) {
     $Uuid = New-SeedUuid -SeedText $Seed -Prefix $Prefix
     $TableName = "quests"
     $Row = Build-Row -Uuid $Uuid -SortOrder 0 -Template @'
-('__UUID__', '', id('cats', ''), '', '', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', 'cards/'),
+('__UUID__', '', id('cats', ''), '', '', 'dialogue', 'C', 0, 10, '', '', 'cards/'),
 '@
   }
   "post" {

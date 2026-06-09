@@ -72,20 +72,19 @@ function renderQuest(quest) {
 }
 
 function getRewardText(quest) {
-  const difficulty = Math.max(Number(quest.difficulty || 1), 1);
-  const food = 2 + (difficulty - 1) * 2;
-  const treat = 1 + (difficulty - 1);
+  const difficulty = api.getQuestDifficultyValue(quest);
+  const food = 2 + difficulty * 2;
+  const treat = 1 + difficulty;
   const toy = difficulty >= 2 ? 1 + Math.floor(difficulty / 2) : 1;
   return `猫粮 ${food}、猫条 ${treat}、玩具 ${toy}`;
 }
-
 function getQuestGameMeta(quest) {
-  if (isGame(quest, "fishing")) return `钓鱼 · 鱼速 ${quest.target_score || 1}`;
-  if (isGame(quest, "merge")) return `合成 · ${quest.target_score || 260} 分`;
-  if (isGame(quest, "paw_on_top")) return `猫爪在上 · 难度 ${quest.difficulty || 1}`;
+  const difficulty = api.normalizeQuestDifficulty(quest.difficulty);
+  if (isGame(quest, "fishing")) return `钓鱼 · 难度 ${difficulty}`;
+  if (isGame(quest, "merge")) return `合成 · ${quest.target_score || 260} 分 · 难度 ${difficulty}`;
+  if (isGame(quest, "paw_on_top")) return `猫爪在上 · 难度 ${difficulty}`;
   return formatQuestType(quest.type);
 }
-
 function getQuestActionLabel(quest) {
   if (isGame(quest, "fishing")) return "进入钓鱼";
   if (isGame(quest, "merge")) return "进入合成";

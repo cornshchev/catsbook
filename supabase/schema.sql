@@ -29,7 +29,8 @@ create table if not exists public.quests (
   title text not null,
   description text not null,
   type text not null check (type in ('dialogue', 'merge', 'paw_on_top', 'puzzle', 'fishing', 'collect', 'social')),
-  unlock_key text,
+  difficulty text not null default 'C' check (difficulty in ('A', 'B', 'C')),
+  target_score integer not null default 0,
   reward_affection integer not null default 0,
   reward_card_title text not null,
   reward_card_text text not null,
@@ -38,10 +39,43 @@ create table if not exists public.quests (
 
 alter table public.quests drop constraint if exists quests_type_check;
 alter table public.quests add column if not exists game_key text;
-alter table public.quests add column if not exists difficulty integer not null default 1;
 alter table public.quests add column if not exists target_score integer not null default 0;
 alter table public.quests add column if not exists reward_image_path text;
 alter table public.quests drop column if exists reward_image_label;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'quests'
+      and column_name = 'difficulty'
+      and data_type <> 'text'
+  ) then
+    alter table public.quests
+      alter column difficulty type text
+      using case greatest(coalesce(difficulty, 1), 1)
+        when 4 then 'A'
+        when 3 then 'A'
+        when 2 then 'B'
+        else 'C'
+      end;
+  end if;
+end $$;
+
+alter table public.quests add column if not exists difficulty text not null default 'C';
+alter table public.quests alter column difficulty set default 'C';
+update public.quests
+set difficulty = case upper(coalesce(difficulty, 'C'))
+  when 'A' then 'A'
+  when 'B' then 'B'
+  else 'C'
+end;
+alter table public.quests drop constraint if exists quests_difficulty_check;
+alter table public.quests
+  add constraint quests_difficulty_check check (difficulty in ('A', 'B', 'C'));
+alter table public.quests drop column if exists unlock_key;
 
 update public.quests
 set type = 'merge'

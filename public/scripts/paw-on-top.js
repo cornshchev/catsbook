@@ -12,20 +12,12 @@ const stateLabel = $("#paw-state");
 
 const pendingQuest = api.getPendingPawQuest();
 const difficulty = Math.max(Number(pendingQuest?.difficulty || 1), 1);
+const difficultyLabel = pendingQuest?.difficultyLabel || api.normalizeQuestDifficulty(difficulty);
+const difficultyConfig = getPawDifficultyConfig(difficulty);
 const config = {
   questId: pendingQuest?.questId || null,
   title: pendingQuest?.title || "自由拍爪练习",
-  needHits: 3,
-  maxAttempts: Math.max(4, 6 - difficulty),
-  catHoldChance: Math.max(0.34, 0.72 - difficulty * 0.08),
-  catWaitMin: Math.max(34, 76 - difficulty * 8),
-  catWaitMax: Math.max(72, 142 - difficulty * 6),
-  catHoldMin: Math.max(24, 78 - difficulty * 9),
-  catHoldMax: Math.max(54, 132 - difficulty * 8),
-  catRetractSpeed: 12 + difficulty * 0.8,
-  humanSpeed: 18,
-  slapFrames: Math.max(15, 22 - difficulty),
-  slapReachX: 388,
+  ...difficultyConfig,
 };
 
 setupLogout(api);
@@ -73,7 +65,7 @@ function resetGame() {
   state.failed = false;
   state.lastTime = performance.now();
   updateHud();
-  setStatus(message, `${config.title}：点击鼠标拍一次猫爪，拍中和拍空都会消耗次数。${config.maxAttempts} 拍内命中 ${config.needHits} 次即可完成，难度 ${difficulty}。`);
+  setStatus(message, `${config.title}：点击鼠标拍一次猫爪，拍中和拍空都会消耗次数。${config.maxAttempts} 拍内命中 ${config.needHits} 次即可完成，难度 ${difficultyLabel}。`);
 }
 
 function loop(time) {
@@ -147,7 +139,7 @@ function updateHands(dt) {
 
   state.humanX = moveToward(state.humanX, state.humanTargetX, config.humanSpeed * dt);
 
-  let catSpeed = state.phase === "cat-retracting" ? config.catRetractSpeed : 9 + difficulty * 0.4;
+  let catSpeed = state.phase === "cat-retracting" ? config.catRetractSpeed : config.catExtendSpeed;
   state.catX = moveToward(state.catX, state.catTargetX, catSpeed * dt);
 
   if (state.phase === "cat-extending" && Math.abs(state.catX - state.catTargetX) < 1) beginCatHoldOrRetract();
@@ -223,6 +215,55 @@ function updateHud() {
   else if (state.failed) stateLabel.textContent = "挑战失败";
   else if (state.slapTimer > 0) stateLabel.textContent = "正在拍爪";
   else stateLabel.textContent = labels[state.phase] || "准备中";
+}
+
+function getPawDifficultyConfig(value) {
+  const level = Math.max(1, Math.min(Number(value || 1), 3));
+  const configs = {
+    1: {
+      needHits: 2,
+      maxAttempts: 6,
+      catHoldChance: 0.82,
+      catWaitMin: 72,
+      catWaitMax: 136,
+      catHoldMin: 92,
+      catHoldMax: 154,
+      catExtendSpeed: 9.0,
+      catRetractSpeed: 10.0,
+      humanSpeed: 20,
+      slapFrames: 22,
+      slapReachX: 382,
+    },
+    2: {
+      needHits: 3,
+      maxAttempts: 6,
+      catHoldChance: 0.72,
+      catWaitMin: 58,
+      catWaitMax: 118,
+      catHoldMin: 74,
+      catHoldMax: 132,
+      catExtendSpeed: 9.4,
+      catRetractSpeed: 11.2,
+      humanSpeed: 20,
+      slapFrames: 21,
+      slapReachX: 384,
+    },
+    3: {
+      needHits: 3,
+      maxAttempts: 5,
+      catHoldChance: 0.64,
+      catWaitMin: 48,
+      catWaitMax: 106,
+      catHoldMin: 62,
+      catHoldMax: 116,
+      catExtendSpeed: 9.8,
+      catRetractSpeed: 12.2,
+      humanSpeed: 20,
+      slapFrames: 20,
+      slapReachX: 386,
+    },
+  };
+  return configs[level];
 }
 
 function draw() {

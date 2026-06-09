@@ -152,7 +152,7 @@ const demoSeed = {
       title: "补全欢迎小纸条",
       description: "和米米进行一次短对话，熟悉接受与完成任务。",
       type: "dialogue",
-      difficulty: 1,
+      difficulty: "C",
       target_score: 0,
       unlock_key: "liked_post:first-morning",
       reward_affection: 12,
@@ -167,7 +167,7 @@ const demoSeed = {
       title: "钓一条闪亮鱼",
       description: "在河边小游戏中钓到鱼，帮助阿池完成巡逻记录。",
       type: "fishing",
-      difficulty: 1,
+      difficulty: "C",
       target_score: 0,
       unlock_key: "completed_welcome_dialogue",
       reward_affection: 18,
@@ -182,7 +182,7 @@ const demoSeed = {
       title: "像素猫头合成练习",
       description: "把掉落的小猫头合成更大的猫头，达到目标分数后完成糯糯的纸箱实验。",
       type: "merge",
-      difficulty: 1,
+      difficulty: "C",
       target_score: 260,
       unlock_key: "completed_welcome_dialogue",
       reward_affection: 8,
@@ -197,7 +197,7 @@ const demoSeed = {
       title: "雨后反光鱼",
       description: "米米也可以调用钓鱼小游戏。这次鱼游得更快，考验拉杆节奏。",
       type: "fishing",
-      difficulty: 2,
+      difficulty: "B",
       target_score: 0,
       unlock_key: "quest_completed:shiny-fish",
       reward_affection: 14,
@@ -212,7 +212,7 @@ const demoSeed = {
       title: "河边猫头堆叠记录",
       description: "阿池调用合成小游戏。目标分数更高，掉落节奏也更紧。",
       type: "merge",
-      difficulty: 2,
+      difficulty: "B",
       target_score: 520,
       unlock_key: "quest_completed:merge-cats",
       reward_affection: 16,
@@ -227,7 +227,7 @@ const demoSeed = {
       title: "猫爪在上练习赛",
       description: "和米米玩一局轻松的拍手小游戏。看准猫爪伸出来的时机，按住或短按鼠标出手。",
       type: "paw_on_top",
-      difficulty: 1,
+      difficulty: "C",
       target_score: 0,
       unlock_key: "quest_completed:shiny-fish",
       reward_affection: 12,
@@ -414,8 +414,31 @@ function isUnlocked(state, unlockKey) {
   return false;
 }
 
+export function normalizeQuestDifficulty(difficulty) {
+  if (typeof difficulty === "number") {
+    if (difficulty >= 3) return "A";
+    if (difficulty === 2) return "B";
+    return "C";
+  }
+  const code = String(difficulty || "C").trim().toUpperCase();
+  if (code === "D") return "C";
+  return ["A", "B", "C"].includes(code) ? code : "C";
+}
+
+export function getQuestDifficultyValue(questOrDifficulty) {
+  const difficulty = typeof questOrDifficulty === "object" ? questOrDifficulty?.difficulty : questOrDifficulty;
+  const code = normalizeQuestDifficulty(difficulty);
+  if (code === "A") return 3;
+  if (code === "B") return 2;
+  return 1;
+}
+
+function isQuestVisibleByPost(state, questId) {
+  return state.posts.some((post) => post.quest_id === questId && isUnlocked(state, post.unlock_key));
+}
+
 function getQuestItemRewards(quest) {
-  const difficulty = Math.max(Number(quest?.difficulty || 1), 1);
+  const difficulty = getQuestDifficultyValue(quest);
   return {
     food: 2 + difficulty * 2,
     treat: 1 + difficulty,
@@ -451,19 +474,20 @@ export function requirePlayer() {
 }
 
 export function setPendingFishingQuest(quest) {
+  const difficulty = getQuestDifficultyValue(quest);
+  const difficultyLabel = normalizeQuestDifficulty(quest?.difficulty);
   const payload = typeof quest === "string"
-    ? { questId: quest, difficulty: 1, title: "钓鱼任务" }
-    : { questId: quest.id, difficulty: quest.target_score || 1, title: quest.title || "钓鱼任务" };
+    ? { questId: quest, difficulty: 1, difficultyLabel: "C", title: "钓鱼任务" }
+    : { questId: quest.id, difficulty, difficultyLabel, title: quest.title || "钓鱼任务" };
   localStorage.setItem(PENDING_FISHING_QUEST_KEY, JSON.stringify(payload));
 }
-
 export function getPendingFishingQuest() {
   const value = localStorage.getItem(PENDING_FISHING_QUEST_KEY);
   if (!value) return null;
   try {
     return JSON.parse(value);
   } catch {
-    return { questId: value, difficulty: 1, title: "钓鱼任务" };
+    return { questId: value, difficulty: 1, difficultyLabel: "C", title: "钓鱼任务" };
   }
 }
 
@@ -476,13 +500,13 @@ export function setPendingMergeQuest(quest) {
     PENDING_MERGE_QUEST_KEY,
     JSON.stringify({
       questId: quest.id,
-      difficulty: quest.difficulty || 1,
+      difficulty: getQuestDifficultyValue(quest),
+      difficultyLabel: normalizeQuestDifficulty(quest.difficulty),
       targetScore: quest.target_score || 260,
       title: quest.title || "合成大猫咪",
     }),
   );
 }
-
 export function getPendingMergeQuest() {
   const value = localStorage.getItem(PENDING_MERGE_QUEST_KEY);
   return value ? JSON.parse(value) : null;
@@ -497,12 +521,12 @@ export function setPendingPawQuest(quest) {
     PENDING_PAW_QUEST_KEY,
     JSON.stringify({
       questId: quest.id,
-      difficulty: quest.difficulty || 1,
+      difficulty: getQuestDifficultyValue(quest),
+      difficultyLabel: normalizeQuestDifficulty(quest.difficulty),
       title: quest.title || "猫爪在上练习赛",
     }),
   );
 }
-
 export function getPendingPawQuest() {
   const value = localStorage.getItem(PENDING_PAW_QUEST_KEY);
   return value ? JSON.parse(value) : null;
@@ -699,6 +723,7 @@ function normalizeFeedQuest(quest) {
   if (!quest) return null;
   return {
     ...quest,
+    difficulty: normalizeQuestDifficulty(quest.difficulty),
     status: quest.status || "available",
   };
 }
@@ -708,6 +733,7 @@ function getPostQuest(state, questId) {
   if (!quest) return null;
   return {
     ...quest,
+    difficulty: normalizeQuestDifficulty(quest.difficulty),
     status: state.questStates[quest.id] || "available",
   };
 }
@@ -895,9 +921,10 @@ export async function listQuests(playerId) {
   if (shouldUseDemo()) {
     const state = readDemo();
     return state.quests
-      .filter((quest) => isUnlocked(state, quest.unlock_key))
+      .filter((quest) => isQuestVisibleByPost(state, quest.id))
       .map((quest) => ({
         ...quest,
+        difficulty: normalizeQuestDifficulty(quest.difficulty),
         cat: getCat(state, quest.cat_id),
         status: state.questStates[quest.id] || "available",
       }));
@@ -908,6 +935,7 @@ export async function listQuests(playerId) {
   if (error) throw new Error(normalizeError(error));
   return (data || []).map((quest) => ({
     ...quest,
+    difficulty: normalizeQuestDifficulty(quest.difficulty),
     cat: withCatResource(quest.cat),
   }));
 }
@@ -915,6 +943,7 @@ export async function listQuests(playerId) {
 export async function startQuest(playerId, questId) {
   if (shouldUseDemo()) {
     const state = readDemo();
+    if (!isQuestVisibleByPost(state, questId)) throw new Error("这个任务还没有通过帖子解锁");
     if (state.questStates[questId] !== "completed") state.questStates[questId] = "active";
     writeDemo(state);
     return;
@@ -930,6 +959,7 @@ export async function completeQuest(playerId, questId) {
     const state = readDemo();
     const quest = state.quests.find((item) => item.id === questId);
     if (!quest) throw new Error("没有找到这条任务。");
+    if (!isQuestVisibleByPost(state, questId)) throw new Error("这个任务还没有通过帖子解锁");
     const wasCompleted = state.questStates[questId] === "completed";
     state.questStates[questId] = "completed";
     if (!wasCompleted) {

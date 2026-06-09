@@ -8,6 +8,7 @@ const message = $("#game-message");
 const restartButton = $("#restart-game");
 const pendingQuest = api.getPendingFishingQuest();
 const fishingDifficulty = pendingQuest?.difficulty || 1;
+const fishingDifficultyLabel = pendingQuest?.difficultyLabel || api.normalizeQuestDifficulty(fishingDifficulty);
 
 setupLogout(api);
 
@@ -59,7 +60,7 @@ function resetGame() {
   state.completed = false;
 
   const title = pendingQuest?.title || "自由钓鱼练习";
-  setStatus(message, `${title}：等感叹号出现后点击画布，再按住鼠标控制绿色滑块。难度 ${fishingDifficulty}。`);
+  setStatus(message, `${title}：等感叹号出现后点击画布，再按住鼠标控制绿色滑块。难度 ${fishingDifficultyLabel}。`);
 }
 
 function loop() {

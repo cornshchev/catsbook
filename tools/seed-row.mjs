@@ -20,7 +20,7 @@ const tableConfigs = {
     label: "quests",
     prefix: "20000000",
     row: ({ uuid }) =>
-      `('${uuid}', '', id('cats', ''), '', '', 'dialogue', 1, 0, 'quest_completed:', 10, '', '', 'cards/'),`,
+      `('${uuid}', '', id('cats', ''), '', '', 'dialogue', 'C', 0, 10, '', '', 'cards/'),`,
   },
   post: {
     label: "posts",

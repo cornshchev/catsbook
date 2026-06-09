@@ -49,6 +49,32 @@ as $$
   end;
 $$;
 
+create or replace function public.quest_difficulty_value(p_difficulty text)
+returns integer
+language sql
+immutable
+as $$
+  select case upper(coalesce(p_difficulty, 'C'))
+    when 'A' then 3
+    when 'B' then 2
+    else 1
+  end;
+$$;
+
+create or replace function public.is_quest_visible_by_post(p_player_id uuid, p_quest_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.posts p
+    where p.quest_id = p_quest_id
+      and public.is_unlocked(p_player_id, p.unlock_key)
+  );
+$$;
+
 drop function if exists public.get_feed_posts(uuid);
 create or replace function public.get_feed_posts(p_player_id uuid)
 returns table (
@@ -221,7 +247,7 @@ returns table (
   title text,
   description text,
   type text,
-  difficulty integer,
+  difficulty text,
   target_score integer,
   reward_card_title text,
   status text,
@@ -256,8 +282,13 @@ begin
   from public.quests q
   join public.cats c on c.id = q.cat_id
   left join public.player_quests pq on pq.quest_id = q.id and pq.player_id = p_player_id
-  where public.is_unlocked(p_player_id, q.unlock_key)
-  order by q.created_at;
+  where public.is_quest_visible_by_post(p_player_id, q.id)
+  order by (
+    select min(p.sort_order)
+    from public.posts p
+    where p.quest_id = q.id
+      and public.is_unlocked(p_player_id, p.unlock_key)
+  ), q.created_at;
 end;
 $$;
 
@@ -267,16 +298,15 @@ language plpgsql
 security definer
 set search_path = public
 as $$
-declare
-  v_unlock_key text;
 begin
   perform public.assert_player_owner(p_player_id);
-  select unlock_key into v_unlock_key from public.quests where id = p_quest_id;
-  if not found then
+
+  if not exists (select 1 from public.quests where id = p_quest_id) then
     raise exception '任务不存在';
   end if;
-  if not public.is_unlocked(p_player_id, v_unlock_key) then
-    raise exception '这个任务还没有解锁';
+
+  if not public.is_quest_visible_by_post(p_player_id, p_quest_id) then
+    raise exception '这个任务还没有通过帖子解锁';
   end if;
 
   insert into public.player_quests (player_id, quest_id, status, started_at)
@@ -286,7 +316,6 @@ begin
       started_at = coalesce(public.player_quests.started_at, now());
 end;
 $$;
-
 create or replace function public.complete_quest(p_player_id uuid, p_quest_id uuid)
 returns void
 language plpgsql
@@ -306,8 +335,8 @@ begin
   if not found then
     raise exception '任务不存在';
   end if;
-  if not public.is_unlocked(p_player_id, v_quest.unlock_key) then
-    raise exception '这个任务还没有解锁';
+  if not public.is_quest_visible_by_post(p_player_id, p_quest_id) then
+    raise exception '这个任务还没有通过帖子解锁';
   end if;
 
   select exists (
@@ -326,7 +355,7 @@ begin
       started_at = coalesce(public.player_quests.started_at, now());
 
   if not v_already_completed then
-    v_difficulty := greatest(coalesce(v_quest.difficulty, 1), 1);
+    v_difficulty := public.quest_difficulty_value(v_quest.difficulty);
     v_food_reward := 2 + v_difficulty * 2;
     v_treat_reward := 1 + v_difficulty;
     v_toy_reward := case when v_difficulty >= 2 then 1 + floor(v_difficulty / 2.0)::integer else 1 end;
@@ -852,6 +881,8 @@ $$;
 
 grant execute on function public.assert_player_owner(uuid) to authenticated;
 grant execute on function public.is_unlocked(uuid, text) to authenticated;
+grant execute on function public.quest_difficulty_value(text) to authenticated;
+grant execute on function public.is_quest_visible_by_post(uuid, uuid) to authenticated;
 grant execute on function public.get_feed_posts(uuid) to authenticated;
 grant execute on function public.mark_feed_posts_seen(uuid, uuid[]) to authenticated;
 grant execute on function public.get_player_quests(uuid) to authenticated;

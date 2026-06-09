@@ -18,6 +18,7 @@ const config = {
   questId: pendingQuest?.questId || null,
   title: pendingQuest?.title || "无限合成练习",
   difficulty: Number(params.get("difficulty") || pendingQuest?.difficulty || 1),
+  difficultyLabel: pendingQuest?.difficultyLabel || api.normalizeQuestDifficulty(Number(params.get("difficulty") || pendingQuest?.difficulty || 1)),
   targetScore: targetScore ? Number(targetScore) : null,
   endless: !targetScore,
 };
@@ -129,7 +130,7 @@ function resetGame() {
   state.lastTime = performance.now();
   updateHud();
   const modeText = config.endless ? "无限模式，没有目标分数。" : `目标分数 ${config.targetScore}。`;
-  setStatus(message, `${config.title}：点击纸箱上方投放圆形像素猫，相同猫咪碰到会合成。${modeText}难度 ${config.difficulty}。`);
+  setStatus(message, `${config.title}：点击纸箱上方投放圆形像素猫，相同猫咪碰到会合成。${modeText}难度 ${config.difficultyLabel}。`);
 }
 
 function loop(time) {

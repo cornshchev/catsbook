@@ -150,12 +150,11 @@ public/resources/avatars/mimi.png
 1. 在 `public.quests` 新增任务，设置：
    - `type`：`dialogue`、`merge`、`paw_on_top`、`fishing`、`collect`、`social`
    - 前端会根据 `type` 自动识别入口：`fishing` 进入钓鱼，`merge` 进入合成，`paw_on_top` 进入猫爪在上，`dialogue` 使用弹窗完成。
-   - `difficulty`：小游戏难度，数值越高越难。钓鱼会提升鱼移动速度和失败压力；合成会加快掉落节奏；猫爪在上会缩短猫爪等待和停留时间。
-   - `target_score`：合成小游戏的完成分数
-   - `unlock_key`：控制解锁条件
+   - `difficulty`：小游戏难度，填写 `A` / `B` / `C`。`A` 表示最难，`B` 表示中等，`C` 表示最简单。
+   - `target_score`：小游戏目标值，例如合成小游戏的完成分数；不要再用它表示难度。
    - `reward_affection`：完成后增加的好感度
    - `reward_card_*`：感谢卡内容
-   - 任务完成时还会按 `difficulty` 自动发放道具：猫粮 `2 + difficulty * 2`，猫条 `1 + difficulty`，玩具在难度 1 时给 `1`，难度 2 起为 `1 + floor(difficulty / 2)`。
+   - 任务完成时会把 `difficulty` 字母换算为数值后自动发放道具：猫粮 `2 + difficulty_value * 2`，猫条 `1 + difficulty_value`，玩具在难度值 1 时给 `1`，难度值 2 起为 `1 + floor(difficulty_value / 2)`。
 2. 在 `public.posts` 新增帖子，并把 `quest_id` 指向对应任务。
 3. 在 `public.posts.image_path` 写图片路径。单图写一个路径；多图直接写多个路径，用逗号、中文逗号或换行分隔；无图写 `null`。
 4. 在 `public.posts.created_at` 可手动写帖子日期，例如 `'2026-06-06'`；填 `default` 时使用数据库首次插入当天。
@@ -168,9 +167,9 @@ public/resources/avatars/mimi.png
 ('帖子id', 'farm-1', ..., '图片说明', 'posts/farm-post-1.jpg, posts/farm-post-2.jpg, posts/farm-post-5.jpg', ..., 16, '2026-06-06')
 ```
 5. 如果要复用小游戏，只需要把新任务的 `type` 写成对应玩法，并调整 `difficulty` / `target_score`。
-6. 如果要让任务在某个任务完成后解锁，可以把 `unlock_key` 写成 `quest_completed:任务slug`，例如 `quest_completed:merge-cats`。
-7. 如果要让任务或帖子在点赞某条帖子后解锁，可以把 `unlock_key` 写成 `liked_post:帖子slug`，例如 `liked_post:first-morning`。
-8. 如需更复杂的新解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
+6. 任务不再维护自己的 `unlock_key`。只要某条已解锁帖子在 `posts.quest_id` 引用了该任务，任务就会显示在帖子和任务列表里，也可以被 `start_quest` / `complete_quest` RPC 接受。
+7. 解锁条件只维护在 `public.posts.unlock_key`：例如 `liked_post:first-morning` 或 `quest_completed:mimi-welcome`。
+8. 如需更复杂的新帖子解锁条件，在 `supabase/functions.sql` 的 `is_unlocked` 中添加判断，并在 `public/scripts/api.js` 的本地演示 `isUnlocked` 中同步添加。
 
 ## 如何维护评论自动回复
 
